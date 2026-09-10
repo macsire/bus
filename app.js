@@ -1,103 +1,33 @@
-const API = {
-  // 臺北市公共運輸處公開資料；若未來改用自家 Worker 代理，只需改這裡。
-  estimate: 'https://tcgbusfs.blob.core.windows.net/blobbus/GetEstimateTime.gz'
-};
-
-const stops = {
-  home: { name: '民權吉林路口', routes: ['307', '604', '277'], aliases: ['民權吉林路口'] },
-  'taipei-main': { name: '臺北車站', routes: ['307', '260', '299'], aliases: ['臺北車站'] },
-  xinsheng: { name: '捷運行天宮站', routes: ['49', '214', '225'], aliases: ['捷運行天宮站', '行天宮'] }
-};
-
-const demo = {
-  home: [
-    { route: '307', destination: '往板橋', minutes: 4 },
-    { route: '604', destination: '往板橋', minutes: 9 },
-    { route: '277', destination: '往榮總', minutes: 15 }
-  ],
-  'taipei-main': [
-    { route: '307', destination: '往撫遠街', minutes: 6 },
-    { route: '260', destination: '往陽明山', minutes: 12 },
-    { route: '299', destination: '往永春高中', minutes: 18 }
-  ],
-  xinsheng: [
-    { route: '49', destination: '往建國北路', minutes: 3 },
-    { route: '214', destination: '往中和', minutes: 11 },
-    { route: '225', destination: '往民生社區', minutes: 21 }
-  ]
-};
-
-let selectedStop = 'home';
-let selectedRoute = 'all';
-let usingLive = false;
-
+const STORAGE_KEY = 'familyBusSettings.v3';
+const state = { settings: loadSettings(), selected: null, location: null };
 const $ = (id) => document.getElementById(id);
-
-function renderChips() {
-  $('quickRoutes').innerHTML = ['all', ...stops[selectedStop].routes].map((route) => `
-    <button class="route-chip ${selectedRoute === route ? 'active' : ''}" type="button" data-route="${route}">
-      ${route === 'all' ? '全部路線' : route}
-    </button>`).join('');
-  document.querySelectorAll('[data-route]').forEach((button) => {
-    button.addEventListener('click', () => { selectedRoute = button.dataset.route; render(); });
-  });
-}
-
-function renderArrivals(items) {
-  const filtered = selectedRoute === 'all' ? items : items.filter((item) => item.route === selectedRoute);
-  $('arrivalList').innerHTML = filtered.length ? filtered.map((item) => `
-    <article class="arrival-row">
-      <div class="route-number">${item.route}</div>
-      <div><strong>${item.destination}</strong><div class="route-destination">臺北市公車</div></div>
-      <div class="arrival-time"><strong>${item.minutes === 0 ? '進站中' : `${item.minutes} 分`}</strong><small>${item.minutes === 0 ? '請準備上車' : '預估到站'}</small></div>
-    </article>`).join('') : '<div class="empty">這個站牌目前沒有符合的路線。</div>';
-}
-
-function setStatus(live, text) {
-  usingLive = live;
-  $('statusDot').className = `status-dot ${live ? 'live' : 'error'}`;
-  $('statusTitle').textContent = live ? '即時資料' : '示範資料';
-  $('statusText').textContent = text;
-  $('updatedAt').textContent = `更新 ${new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
-}
-
-function render(items = demo[selectedStop]) {
-  $('stopName').textContent = stops[selectedStop].name;
-  $('directionHint').textContent = selectedRoute === 'all' ? '雙向' : `路線 ${selectedRoute}`;
-  renderChips();
-  renderArrivals(items);
-}
-
-function normalize(raw) {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter((row) => row && (row.RouteName?.Zh_tw || row.RouteName || row.RouteNameZh)).map((row) => ({
-    route: row.RouteName?.Zh_tw || row.RouteName || row.RouteNameZh,
-    destination: row.StopName?.Zh_tw || row.DirectionName || '往市區',
-    minutes: Math.max(0, Math.round(Number(row.EstimateTime || row.EstimateMinutes || 0) / (row.EstimateMinutes ? 1 : 60)))
-  })).filter((row) => row.route);
-}
-
-async function loadLive() {
-  setStatus(false, '正在讀取臺北市公共運輸處資料…');
-  try {
-    const response = await fetch(API.estimate, { cache: 'no-store' });
-    if (!response.ok) throw new Error('資料來源暫時無法連線');
-    const payload = await response.json();
-    const rows = Array.isArray(payload) ? payload : payload.data || payload.Data || [];
-    const name = stops[selectedStop].aliases;
-    const live = normalize(rows.filter((row) => name.some((alias) => JSON.stringify(row).includes(alias))));
-    if (!live.length) throw new Error('找不到這個站牌的即時資料');
-    setStatus(true, '資料已由臺北市公共運輸處更新');
-    render(live);
-  } catch (error) {
-    setStatus(false, '目前暫時讀不到即時資料，以下顯示示範畫面');
-    render();
-  }
-}
-
-function refresh() { loadLive(); }
-
-$('stopSelect').addEventListener('change', (event) => { selectedStop = event.target.value; selectedRoute = 'all'; loadLive(); });
-$('refreshBtn').addEventListener('click', refresh);
-render();
-loadLive();
+const demoStops = [
+  { id: 'demo-taipei-main', name: '臺北車站', lat: 25.0478, lon: 121.5170, routes: [{ route: '919', directionA: '往新店', directionB: '往北車' }, { route: '307', directionA: '往板橋', directionB: '往撫遠街' }] },
+  { id: 'demo-ximen', name: '捷運西門站', lat: 25.0423, lon: 121.5080, routes: [{ route: '965', directionA: '往九份', directionB: '往板橋' }, { route: '705', directionA: '往三峽', directionB: '往西門' }] },
+  { id: 'demo-zhongxiao', name: '捷運忠孝復興站', lat: 25.0417, lon: 121.5440, routes: [{ route: '212', directionA: '往青年公園', directionB: '往舊莊' }, { route: '262', directionA: '往宏國德霖科技大學', directionB: '往民生社區' }] },
+  { id: 'demo-banqiao', name: '板橋車站', lat: 25.0143, lon: 121.4620, routes: [{ route: '310', directionA: '往中和', directionB: '往板橋' }, { route: '307', directionA: '往撫遠街', directionB: '往板橋' }] }
+];
+function loadSettings(){try{const parsed=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');return{stops:parsed.stops||[],mrt:parsed.mrt||[]}}catch{return{stops:[],mrt:[]}}}
+function saveSettings(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state.settings))}
+function uid(prefix){return`${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`}
+function esc(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function setStatus(kind,title,message){$('statusDot').className=`status-dot ${kind||''}`;$('statusTitle').textContent=title;$('statusText').textContent=message}
+function showPanel(id){document.querySelectorAll('.content-panel').forEach(panel=>{panel.hidden=panel.id!==id});$(id).scrollIntoView({behavior:'smooth',block:'start'})}
+function closePanels(){document.querySelectorAll('.content-panel').forEach(panel=>{panel.hidden=true})}
+function renderStops(){const list=$('stopList');list.innerHTML=state.settings.stops.length?state.settings.stops.map(stop=>`<div class="list-row"><div class="list-main"><strong>${esc(stop.label)}</strong><small>${esc(stop.name)}｜${stop.routes.length} 條路線</small></div><div class="row-actions"><button class="mini-button" data-view-stop="${esc(stop.id)}">查看</button><button class="mini-button" data-action="up-stop" data-id="${esc(stop.id)}" aria-label="上移">↑</button><button class="mini-button" data-action="edit-stop" data-id="${esc(stop.id)}">編輯</button><button class="mini-button delete" data-action="delete-stop" data-id="${esc(stop.id)}">刪除</button></div></div>`).join(''):'<div class="empty">尚未設定常用站牌。<br>按下方按鈕新增第一個站牌。</div>';renderMrt()}
+function renderMrt(){const list=$('mrtList');list.innerHTML=state.settings.mrt.length?state.settings.mrt.map(item=>`<div class="list-row"><div class="list-main"><strong>${esc(item.label)}</strong><small>${esc(item.line||'捷運站')}｜周邊：${esc(item.nearbyStops.join('、')||'尚未設定')}</small></div><div class="row-actions"><button class="mini-button" data-view-mrt="${esc(item.id)}">查看</button><button class="mini-button" data-action="up-mrt" data-id="${esc(item.id)}" aria-label="上移">↑</button><button class="mini-button" data-action="edit-mrt" data-id="${esc(item.id)}">編輯</button><button class="mini-button delete" data-action="delete-mrt" data-id="${esc(item.id)}">刪除</button></div></div>`).join(''):'<div class="empty">尚未設定常用捷運站。<br>按下方按鈕新增捷運站。</div>'}
+function renderRouteFields(routes=[{}]){$('routeFields').innerHTML='';routes.forEach(addRouteField)}
+function addRouteField(route={}){const row=document.createElement('div');row.className='route-field';row.innerHTML=`<div><label>路線</label><input data-route value="${esc(route.route||'')}" placeholder="919" required></div><div><label>方向一</label><input data-a value="${esc(route.directionA||'')}" placeholder="往新店" required></div><div><label>方向二</label><input data-b value="${esc(route.directionB||'')}" placeholder="往北車" required></div><button type="button" aria-label="刪除路線">刪除</button>`;row.querySelector('button').addEventListener('click',()=>row.remove());$('routeFields').appendChild(row)}
+function openEditor(type,item=null){$('editorPanel').hidden=false;$('editType').value=type;$('editId').value=item?.id||'';$('editorTitle').textContent=item?`編輯${type==='stop'?'常用站牌':'常用捷運站'}`:`新增${type==='stop'?'常用站牌':'常用捷運站'}`;$('labelInput').value=item?.label||'';$('nameInput').value=item?.name||'';$('lineInput').value=item?.line||'';$('nearbyStopsInput').value=item?.nearbyStops?.join('、')||'';$('routeEditor').hidden=type!=='stop';$('mrtLineField').hidden=type!=='mrt';$('nearbyStopsField').hidden=type!=='mrt';renderRouteFields(item?.routes||[{}]);showPanel('editorPanel')}
+function closeEditor(){$('editorPanel').hidden=true}
+function showArrivals(stop,label=stop.name){state.selected=stop;$('resultTag').textContent=label;$('resultTitle').textContent=stop.name;const rows=stop.routes.flatMap((route,index)=>[{route:route.route,destination:route.directionA,minutes:4+index*5},{route:route.route,destination:route.directionB,minutes:9+index*5}]);$('arrivalList').innerHTML=rows.length?rows.map(row=>`<article class="arrival-row"><div class="route-number">${esc(row.route)}</div><div><strong>${esc(row.destination)}</strong><div class="route-destination">示範到站資料｜請確認方向</div></div><div class="arrival-time"><strong>${row.minutes} 分</strong><small>預估到站</small></div></article>`).join(''):'<div class="empty">這個站牌目前沒有設定路線。</div>';setStatus('','示範資料','目前顯示介面示範資料，正式版將接入雙北即時資料。');$('resultPanel').scrollIntoView({behavior:'smooth',block:'start'})}
+function showMrt(item){$('resultTag').textContent=item.label;$('resultTitle').textContent=`${item.name}周邊站牌`;const names=item.nearbyStops||[];$('arrivalList').innerHTML=names.length?names.map(name=>{const found=demoStops.find(stop=>stop.name===name);return`<button class="list-row" data-mrt-nearby="${esc(found?.id||'')}" data-mrt-name="${esc(name)}"><div class="list-main"><strong>${esc(name)}</strong><small>${found?found.routes.map(route=>route.route).join('、'):'請先設定站牌資料'}</small></div><span class="text-button">查看</span></button>`}).join(''):'<div class="empty">尚未設定周邊公車站牌。請編輯這個捷運站補上站牌名稱。</div>';setStatus('','常用捷運站','請選擇周邊公車站牌查看到站資訊。');$('resultPanel').scrollIntoView({behavior:'smooth',block:'start'})}
+function haversine(a,b){const rad=Math.PI/180,dLat=(b.lat-a.lat)*rad,dLon=(b.lon-a.lon)*rad,x=Math.sin(dLat/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dLon/2)**2;return 6371000*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))}
+function renderNearby(stops){$('nearbyList').innerHTML=stops.length?stops.map(stop=>`<button class="list-row" data-nearby-id="${esc(stop.id)}"><div class="list-main"><strong>${esc(stop.name)}</strong><small>${Math.round(stop.distance)} 公尺｜${stop.routes.map(route=>route.route).join('、')}</small></div><span class="text-button">查看</span></button>`).join(''):'<div class="empty">目前示範資料中沒有 800 公尺內的站牌。</div>'}
+function locate(){if(!navigator.geolocation){$('locationMessage').textContent='這個瀏覽器不支援定位，請改用常用站牌或手動設定。';return}$('locationMessage').textContent='正在取得位置，請稍候…';navigator.geolocation.getCurrentPosition(position=>{state.location={lat:position.coords.latitude,lon:position.coords.longitude};const nearby=demoStops.map(stop=>({...stop,distance:haversine(state.location,stop)})).filter(stop=>stop.distance<=800).sort((a,b)=>a.distance-b.distance);$('locationMessage').textContent='已取得位置，顯示 800 公尺內的站牌（示範資料）';renderNearby(nearby);setStatus('','定位完成','請選擇附近站牌查看到站資訊。')},()=>{$('locationMessage').textContent='無法取得位置。你可以允許 Safari 定位，或改用常用站牌。';setStatus('error','定位未完成','沒有取得位置，並未儲存任何定位資料。')},{enableHighAccuracy:true,timeout:8000,maximumAge:60000})}
+document.addEventListener('click',event=>{const action=event.target.closest('[data-action]')?.dataset;if(!action)return;const collection=action.action.endsWith('-mrt')?'mrt':'stops';const index=state.settings[collection].findIndex(item=>item.id===action.id);if(index<0)return;if(action.action.startsWith('delete')){if(!confirm(`確定刪除「${state.settings[collection][index].label}」？`))return;state.settings[collection].splice(index,1);saveSettings();renderStops();return}if(action.action.startsWith('edit')){openEditor(collection==='stops'?'stop':'mrt',state.settings[collection][index]);return}if(action.action.startsWith('up')&&index>0){[state.settings[collection][index-1],state.settings[collection][index]]=[state.settings[collection][index],state.settings[collection][index-1]];saveSettings();renderStops()}})
+document.addEventListener('click',event=>{const id=event.target.closest('[data-nearby-id]')?.dataset.nearbyId;if(id)showArrivals(demoStops.find(stop=>stop.id===id));const stopId=event.target.closest('[data-view-stop]')?.dataset.viewStop;if(stopId){const stop=state.settings.stops.find(item=>item.id===stopId);if(stop)showArrivals(stop,stop.label)}const mrtId=event.target.closest('[data-view-mrt]')?.dataset.viewMrt;if(mrtId){const item=state.settings.mrt.find(entry=>entry.id===mrtId);if(item)showMrt(item)}const mrtStopId=event.target.closest('[data-mrt-nearby]')?.dataset.mrtNearby;if(mrtStopId){const stop=demoStops.find(item=>item.id===mrtStopId);if(stop)showArrivals(stop)} })
+$('nearbyBtn').addEventListener('click',()=>{showPanel('nearbyPanel');locate()});$('retryLocationBtn').addEventListener('click',locate);$('stopsBtn').addEventListener('click',()=>{renderStops();showPanel('stopsPanel')});$('mrtBtn').addEventListener('click',()=>{renderMrt();showPanel('mrtPanel')});$('settingsTopBtn').addEventListener('click',()=>{renderStops();showPanel('stopsPanel')});$('addStopBtn').addEventListener('click',()=>openEditor('stop'));$('addMrtBtn').addEventListener('click',()=>openEditor('mrt'));$('addRouteBtn').addEventListener('click',()=>addRouteField());$('closeEditorBtn').addEventListener('click',closeEditor);$('cancelEditorBtn').addEventListener('click',closeEditor);document.querySelectorAll('[data-close-panel]').forEach(button=>button.addEventListener('click',closePanels))
+$('editorForm').addEventListener('submit',event=>{event.preventDefault();const type=$('editType').value,id=$('editId').value,item=type==='stop'?{id:id||uid('stop'),label:$('labelInput').value.trim(),name:$('nameInput').value.trim(),routes:[...document.querySelectorAll('.route-field')].map(row=>({route:row.querySelector('[data-route]').value.trim(),directionA:row.querySelector('[data-a]').value.trim(),directionB:row.querySelector('[data-b]').value.trim()})).filter(route=>route.route&&route.directionA&&route.directionB)}:{id:id||uid('mrt'),label:$('labelInput').value.trim(),name:$('nameInput').value.trim(),line:$('lineInput').value.trim(),nearbyStops:$('nearbyStopsInput').value.split(/[、,，]/).map(value=>value.trim()).filter(Boolean)};if(!item.label||!item.name||(type==='stop'&&!item.routes.length)){alert(type==='stop'?'請填寫名稱，並至少新增一條完整路線。':'請填寫捷運站名稱與按鈕名稱。');return}const collection=type==='stop'?state.settings.stops:state.settings.mrt,index=collection.findIndex(entry=>entry.id===id);if(index>=0)collection[index]=item;else collection.push(item);saveSettings();renderStops();closeEditor();setStatus('','設定已儲存','資料只存在這支裝置的瀏覽器中。')})
+$('backupBtn').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({app:'family-bus',version:3,exportedAt:new Date().toISOString(),...state.settings},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='family-bus-settings.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});$('restoreBtn').addEventListener('click',()=>$('restoreInput').click());$('restoreInput').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data.stops)||!Array.isArray(data.mrt))throw new Error();state.settings={stops:data.stops,mrt:data.mrt};saveSettings();renderStops();setStatus('','設定已匯入','本機設定已還原。')}catch{alert('這不是有效的雙北公車設定檔。')}event.target.value=''})
+renderStops();
