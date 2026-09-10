@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800&display=swap');
+
+:root { font-family: "Noto Sans TC", system-ui, sans-serif; color: #17333a; background: #eef5f3; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: radial-gradient(circle at 95% 0%, #d8edf0 0, transparent 32rem), #eef5f3; }
+button, select { font: inherit; }
+.shell { width: min(100% - 32px, 760px); margin: 0 auto; padding: 24px 0 34px; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.eyebrow { margin: 0 0 4px; color: #377b7c; font-size: .75rem; font-weight: 800; letter-spacing: .13em; }
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 0; font-size: clamp(1.8rem, 5vw, 2.45rem); letter-spacing: -.04em; }
+h2 { margin-bottom: 0; font-size: clamp(1.35rem, 4vw, 1.8rem); letter-spacing: -.03em; }
+.icon-button { display: grid; place-items: center; width: 48px; height: 48px; color: #fff; border: 0; border-radius: 15px; background: #123d4a; box-shadow: 0 8px 18px #123d4a2b; font-size: 1.7rem; cursor: pointer; }
+.icon-button:active { transform: scale(.96); }
+.status-card, .search-panel, .arrival-list, .note-card { border: 1px solid #d4e4e1; border-radius: 22px; background: #ffffffd9; box-shadow: 0 8px 22px #225c5e0d; }
+.status-card { display: flex; align-items: center; gap: 13px; min-height: 76px; padding: 15px 17px; }
+.status-dot { flex: 0 0 auto; width: 12px; height: 12px; border-radius: 50%; background: #e9a326; box-shadow: 0 0 0 5px #e9a3261c; }
+.status-dot.live { background: #2a9b72; box-shadow: 0 0 0 5px #2a9b7220; }
+.status-dot.error { background: #c85d53; box-shadow: 0 0 0 5px #c85d531c; }
+.status-card strong { display: block; font-size: 1rem; }
+.status-card p { margin: 2px 0 0; color: #587277; font-size: .92rem; }
+.status-card time { margin-left: auto; color: #6e8589; font-size: .78rem; white-space: nowrap; }
+.search-panel { margin-top: 14px; padding: 18px; }
+.search-panel label { display: block; margin-bottom: 8px; color: #577277; font-size: .9rem; font-weight: 700; }
+.select-wrap { position: relative; }
+.select-wrap::after { content: "⌄"; position: absolute; top: 50%; right: 15px; pointer-events: none; transform: translateY(-55%); color: #377b7c; font-size: 1.25rem; }
+select { width: 100%; appearance: none; padding: 13px 42px 13px 14px; border: 1px solid #bed6d1; border-radius: 14px; color: #17333a; background: #f7fbfa; font-weight: 700; cursor: pointer; }
+.quick-routes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+.route-chip { padding: 8px 12px; border: 1px solid #cfe3de; border-radius: 999px; color: #316f70; background: #eff8f5; font-size: .9rem; cursor: pointer; }
+.route-chip.active { border-color: #316f70; color: #fff; background: #316f70; }
+.result-section { margin-top: 26px; }
+.section-heading { display: flex; align-items: end; justify-content: space-between; gap: 15px; margin-bottom: 12px; }
+.pill { padding: 5px 10px; border-radius: 999px; color: #477073; background: #dceee9; font-size: .8rem; white-space: nowrap; }
+.arrival-list { overflow: hidden; }
+.arrival-row { display: grid; grid-template-columns: 68px 1fr auto; align-items: center; gap: 13px; min-height: 92px; padding: 15px 17px; border-bottom: 1px solid #e2eeeb; }
+.arrival-row:last-child { border-bottom: 0; }
+.route-number { font-size: 1.25rem; font-weight: 800; color: #123d4a; }
+.route-destination { margin-top: 3px; color: #60777b; font-size: .9rem; }
+.arrival-time { text-align: right; white-space: nowrap; }
+.arrival-time strong { display: block; color: #c56a31; font-size: 1.35rem; }
+.arrival-time small { color: #75888b; font-size: .75rem; }
+.empty { padding: 32px 18px; color: #60777b; text-align: center; }
+.note-card { display: flex; gap: 12px; margin-top: 18px; padding: 15px 17px; }
+.note-icon { display: grid; flex: 0 0 auto; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #fff; background: #377b7c; font-size: .8rem; font-weight: 800; }
+.note-card strong { font-size: .9rem; }
+.note-card p { margin: 4px 0 0; color: #60777b; font-size: .82rem; line-height: 1.55; }
+footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; color: #71878a; font-size: .75rem; }
+footer a { color: #377b7c; }
+@media (min-width: 700px) { .shell { padding-top: 46px; } .status-card, .search-panel { padding-left: 22px; padding-right: 22px; } .arrival-row { grid-template-columns: 90px 1fr auto; padding-left: 22px; padding-right: 22px; } }
+@media (max-width: 430px) { .shell { width: min(100% - 22px, 760px); } .status-card time { display: none; } footer { flex-direction: column; } }

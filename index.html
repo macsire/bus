@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#123d4a" />
+    <meta name="description" content="家人使用的臺北市公車到站查詢頁面" />
+    <title>家用公車站牌</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">FAMILY BUS BOARD</p>
+          <h1>家用公車站牌</h1>
+        </div>
+        <button id="refreshBtn" class="icon-button" type="button" aria-label="重新整理">↻</button>
+      </header>
+
+      <section class="status-card" aria-live="polite">
+        <div class="status-dot" id="statusDot"></div>
+        <div>
+          <strong id="statusTitle">準備查詢</strong>
+          <p id="statusText">選一個常用站牌，查看公車還有多久到。</p>
+        </div>
+        <time id="updatedAt"></time>
+      </section>
+
+      <section class="search-panel" aria-label="查詢條件">
+        <label for="stopSelect">常用站牌</label>
+        <div class="select-wrap">
+          <select id="stopSelect">
+            <option value="home">民權吉林路口（示範）</option>
+            <option value="taipei-main">臺北車站（示範）</option>
+            <option value="xinsheng">捷運行天宮站（示範）</option>
+          </select>
+        </div>
+        <div class="quick-routes" id="quickRoutes" aria-label="快速篩選路線"></div>
+      </section>
+
+      <section class="result-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">ARRIVALS</p>
+            <h2 id="stopName">民權吉林路口</h2>
+          </div>
+          <span class="pill" id="directionHint">雙向</span>
+        </div>
+        <div id="arrivalList" class="arrival-list"></div>
+      </section>
+
+      <aside class="note-card">
+        <span class="note-icon">i</span>
+        <div>
+          <strong>資料怎麼來？</strong>
+          <p>即時資料優先讀取臺北市公共運輸處公開資料；若來源暫時無法連線，頁面會明確顯示「示範資料」，不會冒充即時到站。</p>
+        </div>
+      </aside>
+
+      <footer>
+        <a href="https://www.gov.taipei/" target="_blank" rel="noreferrer">資料來源：臺北市政府</a>
+        <span>適合手機、iPad 與桌機</span>
+      </footer>
+    </main>
+    <script src="./app.js" defer></script>
+  </body>
+</html>
