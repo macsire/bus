@@ -1,34 +1,178 @@
 <!doctype html>
 <html lang="zh-Hant-TW">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#173f58" />
-    <meta name="description" content="家人使用的雙北公車到站查詢頁面" />
-    <title>雙北公車時刻查詢</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <main class="app-frame">
-      <header class="topbar"><div><p class="eyebrow">FAMILY BUS</p><h1>雙北公車時刻查詢</h1></div><button id="settingsTopBtn" class="round-button" type="button" aria-label="開啟設定">⚙</button></header>
-      <section class="welcome" aria-labelledby="welcomeTitle"><p class="eyebrow">今天要去哪裡？</p><h2 id="welcomeTitle">選一個方式查公車</h2><p>目前先提供操作示範；雙北即時資料介接會在下一階段接上。</p></section>
-      <section class="main-actions" aria-label="主要功能">
-        <button id="nearbyBtn" class="feature-button location" type="button"><span class="feature-icon">📍</span><span><strong>尋找附近站牌</strong><small>使用目前位置找附近的站牌</small></span></button>
-        <button id="stopsBtn" class="feature-button bus" type="button"><span class="feature-icon">🚌</span><span><strong>我的常用站牌</strong><small>直接查家附近、診所或市場</small></span></button>
-        <button id="mrtBtn" class="feature-button metro" type="button"><span class="feature-icon">🚇</span><span><strong>我的常用捷運站</strong><small>查看捷運站周邊公車</small></span></button>
-      </section>
-      <section id="statusCard" class="status-card" aria-live="polite"><span id="statusDot" class="status-dot"></span><div><strong id="statusTitle">準備查詢</strong><p id="statusText">請選擇上方功能。</p></div></section>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#173f58" />
+  <meta name="description" content="MyBUS 我的公車時刻表｜雙北公車即時到站與常用站牌查詢" />
+  <title>MyBUS 我的公車時刻表</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="app-frame">
+    <header class="brand-header">
+      <p class="brand-mark">MyBUS</p>
+      <h1>我的公車時刻表</h1>
+      <p class="brand-subtitle">臺北・新北｜即時到站查詢</p>
+    </header>
 
-      <section id="nearbyPanel" class="content-panel" hidden aria-labelledby="nearbyTitle"><div class="section-heading"><div><p class="eyebrow">NEARBY</p><h2 id="nearbyTitle">附近站牌</h2></div><button class="text-button" data-close-panel="nearbyPanel" type="button">關閉</button></div><p id="locationMessage" class="helper-text">按下按鈕後，Safari 才會詢問定位權限。</p><button id="retryLocationBtn" class="primary-button full-button" type="button">📍 取得目前位置</button><div id="nearbyList" class="stack-list"></div></section>
-      <section id="stopsPanel" class="content-panel" hidden aria-labelledby="stopsTitle"><div class="section-heading"><div><p class="eyebrow">MY STOPS</p><h2 id="stopsTitle">我的常用站牌</h2></div><button class="text-button" data-close-panel="stopsPanel" type="button">關閉</button></div><div id="stopList" class="stack-list"></div><button id="addStopBtn" class="secondary-button full-button" type="button">＋ 新增常用站牌</button></section>
-      <section id="mrtPanel" class="content-panel" hidden aria-labelledby="mrtTitle"><div class="section-heading"><div><p class="eyebrow">MY METRO STATIONS</p><h2 id="mrtTitle">我的常用捷運站</h2></div><button class="text-button" data-close-panel="mrtPanel" type="button">關閉</button></div><div id="mrtList" class="stack-list"></div><button id="addMrtBtn" class="secondary-button full-button" type="button">＋ 新增常用捷運站</button></section>
-      <section id="editorPanel" class="content-panel" hidden aria-labelledby="editorTitle"><div class="section-heading"><div><p class="eyebrow">SETTINGS</p><h2 id="editorTitle">新增設定</h2></div><button id="closeEditorBtn" class="text-button" type="button">關閉</button></div><form id="editorForm" class="form-grid"><input id="editType" type="hidden" value="stop" /><input id="editId" type="hidden" /><label for="labelInput">按鈕名稱</label><input id="labelInput" required placeholder="例如：家附近" /><label for="nameInput">站牌名稱</label><input id="nameInput" required placeholder="例如：民權吉林路口" /><div id="mrtLineField" hidden><label for="lineInput">捷運線（可不填）</label><input id="lineInput" placeholder="例如：文湖線" /></div><div id="routeEditor"><div class="form-row-title"><strong>常用路線與方向</strong><span>每條路線填兩個方向</span></div><div id="routeFields"></div><button id="addRouteBtn" class="secondary-button" type="button">＋ 新增一條路線</button></div><div id="nearbyStopsField" hidden><label for="nearbyStopsInput">周邊公車站牌</label><input id="nearbyStopsInput" placeholder="以逗號分隔，例如：台北車站、忠孝東路口" /></div><div class="form-actions"><button class="primary-button" type="submit">儲存設定</button><button id="cancelEditorBtn" class="secondary-button" type="button">取消</button></div></form></section>
+    <section class="home-card" aria-labelledby="homeTitle">
+      <div class="home-heading">
+        <p class="eyebrow">今天要去哪裡？</p>
+        <h2 id="homeTitle">選一個方式查公車</h2>
+      </div>
 
-      <section id="resultPanel" class="result-panel" aria-labelledby="resultTitle"><div class="section-heading"><div><p class="eyebrow">ARRIVALS</p><h2 id="resultTitle">到站查詢</h2></div><span id="resultTag" class="tag">尚未選擇</span></div><div id="arrivalList" class="arrival-list"><div class="empty">請從上方選擇附近站牌、常用站牌或捷運站。</div></div></section>
-      <section class="data-note"><strong>v0.3 說明</strong><p>到站時間與附近站牌已接入 TDX 實際資料；若 TDX 暫時沒有回傳，畫面會顯示明確提示。</p></section>
-      <section class="backup-panel" aria-label="資料備份"><div><strong>設定備份</strong><p>常用站牌與捷運站只存在這支裝置，可手動備份到 iCloud Drive。</p></div><div class="button-row"><button id="backupBtn" class="secondary-button" type="button">備份設定</button><button id="restoreBtn" class="secondary-button" type="button">匯入設定</button><input id="restoreInput" type="file" accept="application/json,.json" hidden /></div></section>
-      <footer><span>行動裝置優先｜直式顯示</span><span>臺北・新北</span></footer>
-    </main>
-    <script src="./app.js" defer></script>
-  </body>
+      <div class="main-actions" aria-label="常用功能">
+        <button id="nearbyBtn" class="feature-button location" type="button">
+          <span class="feature-icon" aria-hidden="true">📍</span>
+          <strong>附近站牌</strong>
+          <small>用目前位置尋找</small>
+        </button>
+
+        <button id="stopsBtn" class="feature-button bus" type="button">
+          <span class="feature-icon" aria-hidden="true">🚌</span>
+          <strong>常用站牌</strong>
+          <small>直接查常搭站牌</small>
+        </button>
+
+        <button id="mrtBtn" class="feature-button metro" type="button">
+          <span class="feature-icon" aria-hidden="true">🚇</span>
+          <strong>常用捷運站</strong>
+          <small>查看周邊公車</small>
+        </button>
+
+        <button id="settingsTopBtn" class="feature-button settings" type="button">
+          <span class="feature-icon" aria-hidden="true">⚙️</span>
+          <strong>設定與備份</strong>
+          <small>管理與匯入設定</small>
+        </button>
+      </div>
+
+      <p class="privacy-note">定位只會在你按下「附近站牌」後使用，不會保存定位紀錄。</p>
+    </section>
+
+    <section id="statusCard" class="status-card" aria-live="polite">
+      <span id="statusDot" class="status-dot"></span>
+      <div>
+        <strong id="statusTitle">準備查詢</strong>
+        <p id="statusText">請選擇上方功能。</p>
+      </div>
+    </section>
+
+    <section id="nearbyPanel" class="content-panel" hidden aria-labelledby="nearbyTitle">
+      <div class="section-heading">
+        <div><p class="eyebrow">附近站牌</p><h2 id="nearbyTitle">找我附近的公車站</h2></div>
+        <button class="text-button" data-close-panel="nearbyPanel" type="button">關閉</button>
+      </div>
+      <p id="locationMessage" class="helper-text">按下按鈕後，Safari 才會詢問定位權限。</p>
+      <button id="retryLocationBtn" class="primary-button full-button" type="button">📍 取得目前位置</button>
+      <div id="nearbyList" class="stack-list"></div>
+    </section>
+
+    <section id="stopsPanel" class="content-panel" hidden aria-labelledby="stopsTitle">
+      <div class="section-heading">
+        <div><p class="eyebrow">常用站牌</p><h2 id="stopsTitle">我的常用站牌</h2></div>
+        <button class="text-button" data-close-panel="stopsPanel" type="button">關閉</button>
+      </div>
+      <div id="stopList" class="stack-list"></div>
+      <button id="addStopBtn" class="secondary-button full-button" type="button">＋ 新增常用站牌</button>
+    </section>
+
+    <section id="mrtPanel" class="content-panel" hidden aria-labelledby="mrtTitle">
+      <div class="section-heading">
+        <div><p class="eyebrow">常用捷運站</p><h2 id="mrtTitle">我的常用捷運站</h2></div>
+        <button class="text-button" data-close-panel="mrtPanel" type="button">關閉</button>
+      </div>
+      <div id="mrtList" class="stack-list"></div>
+      <button id="addMrtBtn" class="secondary-button full-button" type="button">＋ 新增常用捷運站</button>
+    </section>
+
+    <section id="settingsPanel" class="content-panel" hidden aria-labelledby="settingsTitle">
+      <div class="section-heading">
+        <div><p class="eyebrow">設定</p><h2 id="settingsTitle">設定與備份</h2></div>
+        <button class="text-button" data-close-panel="settingsPanel" type="button">關閉</button>
+      </div>
+
+      <div class="settings-menu">
+        <button id="manageStopsBtn" class="settings-link" type="button">
+          <span><strong>管理常用站牌</strong><small>新增、編輯、刪除與排序</small></span><b>›</b>
+        </button>
+        <button id="manageMrtBtn" class="settings-link" type="button">
+          <span><strong>管理常用捷運站</strong><small>設定捷運站與周邊站牌</small></span><b>›</b>
+        </button>
+      </div>
+
+      <div class="backup-box">
+        <strong>備份本機設定</strong>
+        <p>常用站牌與捷運站只存在這支裝置，可手動備份成 JSON 檔，再存入 iCloud Drive。</p>
+        <div class="button-row">
+          <button id="backupBtn" class="secondary-button" type="button">備份設定</button>
+          <button id="restoreBtn" class="secondary-button" type="button">匯入設定</button>
+          <input id="restoreInput" type="file" accept="application/json,.json" hidden />
+        </div>
+      </div>
+    </section>
+
+    <section id="editorPanel" class="content-panel" hidden aria-labelledby="editorTitle">
+      <div class="section-heading">
+        <div><p class="eyebrow">編輯</p><h2 id="editorTitle">新增設定</h2></div>
+        <button id="closeEditorBtn" class="text-button" type="button">關閉</button>
+      </div>
+      <form id="editorForm" class="form-grid">
+        <input id="editType" type="hidden" value="stop" />
+        <input id="editId" type="hidden" />
+        <label for="labelInput">按鈕名稱</label>
+        <input id="labelInput" required placeholder="例如：家附近" />
+        <label for="nameInput">站牌名稱</label>
+        <input id="nameInput" required placeholder="例如：民權吉林路口" />
+
+        <div id="mrtLineField" hidden>
+          <label for="lineInput">捷運線（可不填）</label>
+          <input id="lineInput" placeholder="例如：文湖線" />
+        </div>
+
+        <div id="routeEditor">
+          <div class="form-row-title">
+            <strong>常用路線與方向</strong>
+            <span>每條路線填兩個方向</span>
+          </div>
+          <div id="routeFields"></div>
+          <button id="addRouteBtn" class="secondary-button" type="button">＋ 新增一條路線</button>
+        </div>
+
+        <div id="nearbyStopsField" hidden>
+          <label for="nearbyStopsInput">周邊公車站牌</label>
+          <input id="nearbyStopsInput" placeholder="以逗號分隔，例如：台北車站、忠孝東路口" />
+        </div>
+
+        <div class="form-actions">
+          <button class="primary-button" type="submit">儲存設定</button>
+          <button id="cancelEditorBtn" class="secondary-button" type="button">取消</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="resultPanel" class="result-panel" aria-labelledby="resultTitle">
+      <div class="section-heading">
+        <div><p class="eyebrow">即時到站</p><h2 id="resultTitle">到站查詢</h2></div>
+        <span id="resultTag" class="tag">尚未選擇</span>
+      </div>
+      <div id="arrivalList" class="arrival-list">
+        <div class="empty">選擇附近站牌、常用站牌或捷運站後，這裡會顯示即時到站資訊。</div>
+      </div>
+    </section>
+
+    <section class="data-note">
+      <strong>v0.3</strong>
+      <p>到站時間與附近站牌已接入 TDX 實際資料；若暫時沒有回傳，畫面會顯示資料狀態。</p>
+    </section>
+
+    <footer>
+      <span>MyBUS 我的公車時刻表</span>
+      <span>手機直式優先</span>
+    </footer>
+  </main>
+
+  <script src="./app.js" defer></script>
+</body>
 </html>
