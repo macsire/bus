@@ -1,6 +1,6 @@
-const STORAGE_KEY = 'familyBusSettings.v3';
+const STORAGE_KEY = 'familyBusSettings.v4';
 const API_BASE = 'https://b-proxy.biscuit-trove0d.workers.dev';
-const state = { settings: loadSettings(), selected: null, location: null, nearbyStops: [] };
+const state = { settings: loadSettings(), selected: null, location: null, nearbyStops: [], searchResults: [] };
 const $ = (id) => document.getElementById(id);
 const demoStops = [
   { id: 'demo-taipei-main', name: '臺北車站', lat: 25.0478, lon: 121.5170, routes: [{ route: '919', directionA: '往新店', directionB: '往北車' }, { route: '307', directionA: '往板橋', directionB: '往撫遠街' }] },
@@ -8,246 +8,38 @@ const demoStops = [
   { id: 'demo-zhongxiao', name: '捷運忠孝復興站', lat: 25.0417, lon: 121.5440, routes: [{ route: '212', directionA: '往青年公園', directionB: '往舊莊' }, { route: '262', directionA: '往宏國德霖科技大學', directionB: '往民生社區' }] },
   { id: 'demo-banqiao', name: '板橋車站', lat: 25.0143, lon: 121.4620, routes: [{ route: '310', directionA: '往中和', directionB: '往板橋' }, { route: '307', directionA: '往撫遠街', directionB: '往板橋' }] }
 ];
-
-function loadSettings(){try{const parsed=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');return{stops:parsed.stops||[],mrt:parsed.mrt||[]}}catch{return{stops:[],mrt:[]}}}
+function loadSettings(){try{const parsed=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');return{stops:parsed.stops||[]}}catch{return{stops:[]}}}
 function saveSettings(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state.settings))}
 function uid(prefix){return`${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`}
 function esc(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function normalize(value){return String(value||'').replace(/[臺台\s]/g,'')}
 function setStatus(kind,title,message){$('statusDot').className=`status-dot ${kind||''}`;$('statusTitle').textContent=title;$('statusText').textContent=message}
 function showPanel(id){document.querySelectorAll('.content-panel').forEach(panel=>{panel.hidden=panel.id!==id});$(id).scrollIntoView({behavior:'smooth',block:'start'})}
 function closePanels(){document.querySelectorAll('.content-panel').forEach(panel=>{panel.hidden=true})}
-
-function renderStops(){
-  const list=$('stopList');
-  list.innerHTML=state.settings.stops.length
-    ?state.settings.stops.map(stop=>`<div class="list-row"><div class="list-main"><strong>${esc(stop.label)}</strong><small>${esc(stop.name)}｜${stop.routes.length} 條路線</small></div><div class="row-actions"><button class="mini-button" data-view-stop="${esc(stop.id)}">查看</button><button class="mini-button" data-action="up-stop" data-id="${esc(stop.id)}" aria-label="上移">↑</button><button class="mini-button" data-action="edit-stop" data-id="${esc(stop.id)}">編輯</button><button class="mini-button delete" data-action="delete-stop" data-id="${esc(stop.id)}">刪除</button></div></div>`).join('')
-    :'<div class="empty">尚未設定常用站牌。<br>按下方按鈕新增第一個站牌。</div>';
-  renderMrt();
-}
-function renderMrt(){
-  const list=$('mrtList');
-  list.innerHTML=state.settings.mrt.length
-    ?state.settings.mrt.map(item=>`<div class="list-row"><div class="list-main"><strong>${esc(item.label)}</strong><small>${esc(item.line||'捷運站')}｜周邊：${esc(item.nearbyStops.join('、')||'尚未設定')}</small></div><div class="row-actions"><button class="mini-button" data-view-mrt="${esc(item.id)}">查看</button><button class="mini-button" data-action="up-mrt" data-id="${esc(item.id)}" aria-label="上移">↑</button><button class="mini-button" data-action="edit-mrt" data-id="${esc(item.id)}">編輯</button><button class="mini-button delete" data-action="delete-mrt" data-id="${esc(item.id)}">刪除</button></div></div>`).join('')
-    :'<div class="empty">尚未設定常用捷運站。<br>按下方按鈕新增捷運站。</div>';
-}
-
+function renderStops(){const list=$('stopList');list.innerHTML=state.settings.stops.length?state.settings.stops.map(stop=>`<div class="list-row"><div class="list-main"><strong>${esc(stop.label)}</strong><small>${esc(stop.name)}｜${stop.routes.length} 條路線</small></div><div class="row-actions"><button class="mini-button" data-view-stop="${esc(stop.id)}">查看</button><button class="mini-button" data-action="up-stop" data-id="${esc(stop.id)}" aria-label="上移">↑</button><button class="mini-button" data-action="edit-stop" data-id="${esc(stop.id)}">編輯</button><button class="mini-button delete" data-action="delete-stop" data-id="${esc(stop.id)}">刪除</button></div></div>`).join(''):'<div class="empty">尚未設定常用站牌。<br>按下方按鈕新增第一個站牌。</div>'}
 function renderRouteFields(routes=[{}]){$('routeFields').innerHTML='';routes.forEach(addRouteField)}
-function addRouteField(route={}){
-  const row=document.createElement('div');
-  row.className='route-field';
-  row.innerHTML=`<div><label>路線</label><input data-route value="${esc(route.route||'')}" placeholder="919" required></div><div><label>方向一</label><input data-a value="${esc(route.directionA||'')}" placeholder="往新店" required></div><div><label>方向二</label><input data-b value="${esc(route.directionB||'')}" placeholder="往北車" required></div><button type="button" aria-label="刪除路線">刪除</button>`;
-  row.querySelector('button').addEventListener('click',()=>row.remove());
-  $('routeFields').appendChild(row);
-}
-function openEditor(type,item=null){
-  $('editorPanel').hidden=false;
-  $('editType').value=type;
-  $('editId').value=item?.id||'';
-  $('editorTitle').textContent=item?`編輯${type==='stop'?'常用站牌':'常用捷運站'}`:`新增${type==='stop'?'常用站牌':'常用捷運站'}`;
-  $('labelInput').value=item?.label||'';
-  $('nameInput').value=item?.name||'';
-  $('lineInput').value=item?.line||'';
-  $('nearbyStopsInput').value=item?.nearbyStops?.join('、')||'';
-  $('routeEditor').hidden=type!=='stop';
-  $('mrtLineField').hidden=type!=='mrt';
-  $('nearbyStopsField').hidden=type!=='mrt';
-  renderRouteFields(item?.routes||[{}]);
-  showPanel('editorPanel');
-}
+function addRouteField(route={}){const row=document.createElement('div');row.className='route-field';row.innerHTML=`<div><label>路線</label><input data-route value="${esc(route.route||'')}" placeholder="919" required></div><div><label>方向一</label><input data-a value="${esc(route.directionA||'')}" placeholder="往新店" required></div><div><label>方向二</label><input data-b value="${esc(route.directionB||'')}" placeholder="往北車" required></div><button type="button" aria-label="刪除路線">刪除</button>`;row.querySelector('button').addEventListener('click',()=>row.remove());$('routeFields').appendChild(row)}
+function openEditor(item=null){$('editorPanel').hidden=false;$('editId').value=item?.id||'';$('editorTitle').textContent=item?'編輯常用站牌':'新增常用站牌';$('labelInput').value=item?.label||'';$('nameInput').value=item?.name||'';renderRouteFields(item?.routes||[{}]);showPanel('editorPanel')}
 function closeEditor(){$('editorPanel').hidden=true}
-
 function apiUrl(path){return`${API_BASE}${path}`}
-async function fetchJson(path){
-  const response=await fetch(apiUrl(path));
-  const data=await response.json();
-  if(!response.ok||data.error)throw new Error(data.error||`API ${response.status}`);
-  return data;
-}
-function etaMinutes(row){
-  if(Number.isFinite(row.EstimateTime))return Math.max(0,Math.round(row.EstimateTime/60));
-  if(row.NextBusTime){
-    const minutes=Math.round((new Date(row.NextBusTime)-Date.now())/60000);
-    return minutes>=0?minutes:null;
-  }
-  return null;
-}
+async function fetchJson(path){const response=await fetch(apiUrl(path));const data=await response.json();if(!response.ok||data.error)throw new Error(data.error||`API ${response.status}`);return data}
+function etaMinutes(row){if(Number.isFinite(row.EstimateTime))return Math.max(0,Math.round(row.EstimateTime/60));if(row.NextBusTime){const minutes=Math.round((new Date(row.NextBusTime)-Date.now())/60000);return minutes>=0?minutes:null}return null}
 function etaDirection(row){return row.DirectionName?.Zh_tw||row.DirectionName?.En||`方向 ${Number(row.Direction||0)+1}`}
-function renderLiveArrivals(rows,stop,label){
-  const normalize=value=>String(value||'').replace(/[臺台\s]/g,'');
-  const wanted=normalize(stop.name);
-  const hasTdxStopId=Boolean(stop.city&&stop.id&&!String(stop.id).startsWith('demo-'));
-  const matched=rows.filter(row=>hasTdxStopId?row.StopUID===stop.id:(()=>{
-    const name=normalize(row.StopName?.Zh_tw||row.StopName?.En);
-    return name&&(name.includes(wanted)||wanted.includes(name));
-  })());
-  const unique=[...new Map(matched.map(row=>[`${row.RouteName?.Zh_tw||row.RouteName?.En||''}|${row.StopUID||''}|${row.Direction}`,row])).values()];
-  const sorted=unique.filter(row=>row.StopStatus!==2).sort((a,b)=>(etaMinutes(a)??999)-(etaMinutes(b)??999));
-  $('arrivalList').innerHTML=sorted.length?sorted.map(row=>{
-    const minutes=etaMinutes(row);
-    const status=row.StopStatus===1?'尚未發車':minutes===0?'即將到站':minutes==null?'時間未提供':`${minutes} 分`;
-    return`<article class="arrival-row"><div class="route-number">${esc(row.RouteName?.Zh_tw||row.RouteName?.En||'')}</div><div><strong>${esc(etaDirection(row))}</strong><div class="route-destination">${esc(stop.name)}｜TDX 即時資料</div></div><div class="arrival-time"><strong>${esc(status)}</strong><small>預估到站</small></div></article>`;
-  }).join(''):'<div class="empty">TDX 找不到這個站牌的即時資料，請確認站牌名稱。</div>';
-  setStatus('success','即時資料','資料來自 TDX，會依公車回報狀態更新。');
-}
-async function loadLiveArrivals(stop,label){
-  const routeNames=[...new Set((stop.routes||[]).map(route=>String(route.route||'').trim()).filter(Boolean))];
-  if(!routeNames.length)throw new Error('這個站牌尚未設定路線');
-  const cities=stop.city?[stop.city]:['Taipei','NewTaipei'];
-  const results=await Promise.allSettled(routeNames.flatMap(route=>cities.map(city=>fetchJson(`/eta?city=${city}&route=${encodeURIComponent(route)}`))));
-  const rows=results.flatMap(result=>result.status==='fulfilled'&&Array.isArray(result.value)?result.value:[]);
-  if(!rows.length)throw new Error('TDX 沒有回傳這些路線的資料');
-  renderLiveArrivals(rows,stop,label);
-}
-async function showArrivals(stop,label=stop.name){
-  state.selected=stop;
-  $('resultTag').textContent=label;
-  $('resultTitle').textContent=stop.name;
-  $('arrivalList').innerHTML='<div class="empty">正在查詢 TDX 即時到站資料…</div>';
-  $('resultPanel').scrollIntoView({behavior:'smooth',block:'start'});
-  try{
-    await loadLiveArrivals(stop,label);
-  }catch(error){
-    const rows=stop.routes.flatMap((route,index)=>[
-      {route:route.route,destination:route.directionA,minutes:4+index*5},
-      {route:route.route,destination:route.directionB,minutes:9+index*5}
-    ]);
-    $('arrivalList').innerHTML=rows.length?rows.map(row=>`<article class="arrival-row"><div class="route-number">${esc(row.route)}</div><div><strong>${esc(row.destination)}</strong><div class="route-destination">無法取得即時資料，以下為示範畫面</div></div><div class="arrival-time"><strong>${row.minutes} 分</strong><small>示範資料</small></div></article>`).join(''):'<div class="empty">這個站牌目前沒有設定路線。</div>';
-    setStatus('error','即時資料暫時無法取得',error.message);
-  }
-}
-function showMrt(item){
-  $('resultTag').textContent=item.label;
-  $('resultTitle').textContent=`${item.name}周邊站牌`;
-  const names=item.nearbyStops||[];
-  $('arrivalList').innerHTML=names.length?names.map(name=>{
-    const found=demoStops.find(stop=>stop.name===name);
-    return`<button class="list-row" data-mrt-nearby="${esc(found?.id||'')}" data-mrt-name="${esc(name)}"><div class="list-main"><strong>${esc(name)}</strong><small>${found?found.routes.map(route=>route.route).join('、'):'請先設定站牌資料'}</small></div><span class="text-button">查看</span></button>`;
-  }).join(''):'<div class="empty">尚未設定周邊公車站牌。請編輯這個捷運站補上站牌名稱。</div>';
-  setStatus('','常用捷運站','請選擇周邊公車站牌查看到站資訊。');
-  $('resultPanel').scrollIntoView({behavior:'smooth',block:'start'});
-}
-function haversine(a,b){
-  const rad=Math.PI/180,dLat=(b.lat-a.lat)*rad,dLon=(b.lon-a.lon)*rad;
-  const x=Math.sin(dLat/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dLon/2)**2;
-  return 6371000*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
-}
-function renderNearby(stops){
-  $('nearbyList').innerHTML=stops.length?stops.map(stop=>{
-    const routes=[...new Set((stop.routes||[]).map(route=>route.route||route).filter(Boolean))];
-    return`<button class="list-row" data-nearby-id="${esc(stop.id)}"><div class="list-main"><strong>${esc(stop.name)}</strong><small>${Math.round(stop.distance)} 公尺${routes.length?`｜${esc(routes.join('、'))}`:''}</small></div><span class="text-button">查看</span></button>`;
-  }).join(''):'<div class="empty">800 公尺內目前沒有找到公車站牌。</div>';
-}
-async function loadNearbyStops(location){
-  const results=await Promise.all(['Taipei','NewTaipei'].map(async city=>{
-    const rows=await fetchJson(`/stops?city=${city}`);
-    return rows.map(stop=>({...stop,city,distance:haversine(location,{lat:stop.lat,lon:stop.lon}),routes:(stop.routes||[]).map(route=>({route:route.route,directionA:'',directionB:''}))}));
-  }));
-  return results.flat().filter(stop=>stop.distance<=800).sort((a,b)=>a.distance-b.distance).slice(0,30);
-}
-function locate(){
-  if(!navigator.geolocation){
-    $('locationMessage').textContent='這個瀏覽器不支援定位，請改用常用站牌或手動設定。';
-    return;
-  }
-  $('locationMessage').textContent='正在取得位置，請稍候…';
-  navigator.geolocation.getCurrentPosition(async position=>{
-    state.location={lat:position.coords.latitude,lon:position.coords.longitude};
-    try{
-      state.nearbyStops=await loadNearbyStops(state.location);
-      $('locationMessage').textContent='已取得位置，顯示 800 公尺內的實際站牌';
-      renderNearby(state.nearbyStops);
-      setStatus('success','定位完成','站牌資料來自 TDX，請選擇要查詢的站牌。');
-    }catch(error){
-      state.nearbyStops=demoStops.map(stop=>({...stop,distance:haversine(state.location,stop)})).filter(stop=>stop.distance<=800).sort((a,b)=>a.distance-b.distance);
-      $('locationMessage').textContent='TDX 站牌資料暫時無法取得，顯示示範資料';
-      renderNearby(state.nearbyStops);
-      setStatus('error','站牌資料暫時無法取得',error.message);
-    }
-  },error=>{
-    $('locationMessage').textContent=`無法取得位置（${error.code}）。請確認 Safari 的定位權限與 iPad 定位服務。`;
-    setStatus('error','定位未完成','沒有取得位置，並未儲存任何定位資料。');
-  },{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
-}
-
-document.addEventListener('click',event=>{
-  const action=event.target.closest('[data-action]')?.dataset;
-  if(!action)return;
-  const collection=action.action.endsWith('-mrt')?'mrt':'stops';
-  const index=state.settings[collection].findIndex(item=>item.id===action.id);
-  if(index<0)return;
-  if(action.action.startsWith('delete')){
-    if(!confirm(`確定刪除「${state.settings[collection][index].label}」？`))return;
-    state.settings[collection].splice(index,1);saveSettings();renderStops();return;
-  }
-  if(action.action.startsWith('edit')){
-    openEditor(collection==='stops'?'stop':'mrt',state.settings[collection][index]);return;
-  }
-  if(action.action.startsWith('up')&&index>0){
-    [state.settings[collection][index-1],state.settings[collection][index]]=[state.settings[collection][index],state.settings[collection][index-1]];
-    saveSettings();renderStops();
-  }
-});
-document.addEventListener('click',event=>{
-  const id=event.target.closest('[data-nearby-id]')?.dataset.nearbyId;
-  if(id){const stop=state.nearbyStops.find(item=>item.id===id);if(stop)showArrivals(stop)}
-  const stopId=event.target.closest('[data-view-stop]')?.dataset.viewStop;
-  if(stopId){const stop=state.settings.stops.find(item=>item.id===stopId);if(stop)showArrivals(stop,stop.label)}
-  const mrtId=event.target.closest('[data-view-mrt]')?.dataset.viewMrt;
-  if(mrtId){const item=state.settings.mrt.find(entry=>entry.id===mrtId);if(item)showMrt(item)}
-  const mrtStopId=event.target.closest('[data-mrt-nearby]')?.dataset.mrtNearby;
-  if(mrtStopId){const stop=demoStops.find(item=>item.id===mrtStopId);if(stop)showArrivals(stop)}
-});
-
-$('nearbyBtn').addEventListener('click',()=>{showPanel('nearbyPanel');locate()});
-$('retryLocationBtn').addEventListener('click',locate);
-$('stopsBtn').addEventListener('click',()=>{renderStops();showPanel('stopsPanel')});
-$('mrtBtn').addEventListener('click',()=>{renderMrt();showPanel('mrtPanel')});
-$('settingsTopBtn').addEventListener('click',()=>showPanel('settingsPanel'));
-$('manageStopsBtn').addEventListener('click',()=>{renderStops();showPanel('stopsPanel')});
-$('manageMrtBtn').addEventListener('click',()=>{renderMrt();showPanel('mrtPanel')});
-$('addStopBtn').addEventListener('click',()=>openEditor('stop'));
-$('addMrtBtn').addEventListener('click',()=>openEditor('mrt'));
-$('addRouteBtn').addEventListener('click',()=>addRouteField());
-$('closeEditorBtn').addEventListener('click',closeEditor);
-$('cancelEditorBtn').addEventListener('click',closeEditor);
-document.querySelectorAll('[data-close-panel]').forEach(button=>button.addEventListener('click',closePanels));
-
-$('editorForm').addEventListener('submit',event=>{
-  event.preventDefault();
-  const type=$('editType').value,id=$('editId').value;
-  const item=type==='stop'
-    ?{id:id||uid('stop'),label:$('labelInput').value.trim(),name:$('nameInput').value.trim(),routes:[...document.querySelectorAll('.route-field')].map(row=>({route:row.querySelector('[data-route]').value.trim(),directionA:row.querySelector('[data-a]').value.trim(),directionB:row.querySelector('[data-b]').value.trim()})).filter(route=>route.route&&route.directionA&&route.directionB)}
-    :{id:id||uid('mrt'),label:$('labelInput').value.trim(),name:$('nameInput').value.trim(),line:$('lineInput').value.trim(),nearbyStops:$('nearbyStopsInput').value.split(/[、,，]/).map(value=>value.trim()).filter(Boolean)};
-  if(!item.label||!item.name||(type==='stop'&&!item.routes.length)){
-    alert(type==='stop'?'請填寫名稱，並至少新增一條完整路線。':'請填寫捷運站名稱與按鈕名稱。');
-    return;
-  }
-  const collection=type==='stop'?state.settings.stops:state.settings.mrt,index=collection.findIndex(entry=>entry.id===id);
-  if(index>=0)collection[index]=item;else collection.push(item);
-  saveSettings();renderStops();closeEditor();
-  setStatus('','設定已儲存','資料只存在這支裝置的瀏覽器中。');
-});
-
-$('backupBtn').addEventListener('click',()=>{
-  const blob=new Blob([JSON.stringify({app:'family-bus',version:3,exportedAt:new Date().toISOString(),...state.settings},null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob),link=document.createElement('a');
-  link.href=url;link.download='family-bus-settings.json';link.click();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
-});
-$('restoreBtn').addEventListener('click',()=>$('restoreInput').click());
-$('restoreInput').addEventListener('change',async event=>{
-  const file=event.target.files[0];
-  if(!file)return;
-  try{
-    const data=JSON.parse(await file.text());
-    if(!Array.isArray(data.stops)||!Array.isArray(data.mrt))throw new Error();
-    state.settings={stops:data.stops,mrt:data.mrt};
-    saveSettings();renderStops();
-    setStatus('','設定已匯入','本機設定已還原。');
-  }catch{
-    alert('這不是有效的雙北公車設定檔。');
-  }
-  event.target.value='';
-});
-
+function renderLiveArrivals(rows,stop,label){const wanted=normalize(stop.name);const matched=rows.filter(row=>stop.id&&!String(stop.id).startsWith('demo-')?row.StopUID===stop.id:(()=>{const name=normalize(row.StopName?.Zh_tw||row.StopName?.En);return name&&(name.includes(wanted)||wanted.includes(name))})());const unique=[...new Map(matched.map(row=>[`${row.RouteName?.Zh_tw||row.RouteName?.En||''}|${row.StopUID||''}|${row.Direction}`,row])).values()];const sorted=unique.filter(row=>row.StopStatus!==2).sort((a,b)=>(etaMinutes(a)??999)-(etaMinutes(b)??999));$('arrivalList').innerHTML=sorted.length?sorted.map(row=>{const minutes=etaMinutes(row);const status=row.StopStatus===1?'尚未發車':minutes===0?'即將到站':minutes==null?'時間未提供':`${minutes} 分`;return`<article class="arrival-row"><div class="route-number">${esc(row.RouteName?.Zh_tw||row.RouteName?.En||'')}</div><div><strong>${esc(etaDirection(row))}</strong><div class="route-destination">${esc(stop.name)}｜TDX 即時資料</div></div><div class="arrival-time"><strong>${esc(status)}</strong><small>預估到站</small></div></article>`}).join(''):'<div class="empty">TDX 找不到這個站牌的即時資料，請確認站牌名稱。</div>';setStatus('success','即時資料','資料來自 TDX，會依公車回報狀態更新。')}
+async function loadLiveArrivals(stop,label){const routeNames=[...new Set((stop.routes||[]).map(route=>String(route.route||'').trim()).filter(Boolean))];const cities=stop.city?[stop.city]:['Taipei','NewTaipei'];let rows=[];if(routeNames.length){const results=await Promise.allSettled(routeNames.flatMap(route=>cities.map(city=>fetchJson(`/eta?city=${city}&route=${encodeURIComponent(route)}`))));rows=results.flatMap(result=>result.status==='fulfilled'&&Array.isArray(result.value)?result.value:[])}else{const results=await Promise.allSettled(cities.map(city=>fetchJson(`/eta?city=${city}`)));rows=results.flatMap(result=>result.status==='fulfilled'&&Array.isArray(result.value)?result.value:[])}if(!rows.length)throw new Error('TDX 沒有回傳這個站牌的資料');renderLiveArrivals(rows,stop,label)}
+async function showArrivals(stop,label=stop.name){state.selected=stop;$('resultTag').textContent=label;$('resultTitle').textContent=stop.name;$('arrivalList').innerHTML='<div class="empty">正在查詢 TDX 即時到站資料…</div>';$('resultPanel').scrollIntoView({behavior:'smooth',block:'start'});try{await loadLiveArrivals(stop,label)}catch(error){const rows=(stop.routes||[]).flatMap((route,index)=>[{route:route.route,destination:route.directionA,minutes:4+index*5},{route:route.route,destination:route.directionB,minutes:9+index*5}]);$('arrivalList').innerHTML=rows.length?rows.map(row=>`<article class="arrival-row"><div class="route-number">${esc(row.route)}</div><div><strong>${esc(row.destination)}</strong><div class="route-destination">無法取得即時資料，以下為示範畫面</div></div><div class="arrival-time"><strong>${row.minutes} 分</strong><small>示範資料</small></div></article>`).join(''):'<div class="empty">這個站牌目前沒有設定路線，也找不到即時資料。</div>';setStatus('error','即時資料暫時無法取得',error.message)}}
+function haversine(a,b){const rad=Math.PI/180,dLat=(b.lat-a.lat)*rad,dLon=(b.lon-a.lon)*rad,x=Math.sin(dLat/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dLon/2)**2;return 6371000*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))}
+function renderNearby(stops){$('nearbyList').innerHTML=stops.length?stops.map(stop=>{const routes=[...new Set((stop.routes||[]).map(route=>route.route||route).filter(Boolean))];return`<button class="list-row" data-nearby-id="${esc(stop.id)}"><div class="list-main"><strong>${esc(stop.name)}</strong><small>${Math.round(stop.distance)} 公尺${routes.length?`｜${esc(routes.join('、'))}`:''}</small></div><span class="text-button">查看</span></button>`}).join(''):'<div class="empty">800 公尺內目前沒有找到公車站牌。</div>'}
+async function loadCityStops(city){const rows=await fetchJson(`/stops?city=${city}`);return rows.map(stop=>({...stop,city,routes:(stop.routes||[]).map(route=>({route:route.route,directionA:'',directionB:''}))}))}
+async function loadNearbyStops(location){const results=await Promise.all(['Taipei','NewTaipei'].map(async city=>{const rows=await loadCityStops(city);return rows.map(stop=>({...stop,distance:haversine(location,{lat:stop.lat,lon:stop.lon})}))}));return results.flat().filter(stop=>stop.distance<=800).sort((a,b)=>a.distance-b.distance).slice(0,30)}
+function locate(){if(!navigator.geolocation){$('locationMessage').textContent='這個瀏覽器不支援定位，請改用我的常用或搜尋站牌。';return}$('locationMessage').textContent='正在取得位置，請稍候…';navigator.geolocation.getCurrentPosition(async position=>{state.location={lat:position.coords.latitude,lon:position.coords.longitude};try{state.nearbyStops=await loadNearbyStops(state.location);$('locationMessage').textContent='已取得位置，顯示 800 公尺內的實際站牌';renderNearby(state.nearbyStops);setStatus('success','定位完成','站牌資料來自 TDX，請選擇要查詢的站牌。')}catch(error){state.nearbyStops=demoStops.map(stop=>({...stop,distance:haversine(state.location,stop)})).filter(stop=>stop.distance<=800).sort((a,b)=>a.distance-b.distance);$('locationMessage').textContent='TDX 站牌資料暫時無法取得，顯示示範資料';renderNearby(state.nearbyStops);setStatus('error','站牌資料暫時無法取得',error.message)}},error=>{$('locationMessage').textContent=`無法取得位置（${error.code}）。請確認瀏覽器的定位權限與系統定位服務。`;setStatus('error','定位未完成','沒有取得位置，並未儲存任何定位資料。')},{enableHighAccuracy:true,timeout:12000,maximumAge:60000})}
+async function searchStops(query){const q=normalize(query);if(!q)return[];const results=await Promise.allSettled(['Taipei','NewTaipei'].map(loadCityStops));const rows=results.flatMap(result=>result.status==='fulfilled'?result.value:[]);const seen=new Set();return rows.filter(stop=>normalize(stop.name).includes(q)).filter(stop=>{const key=`${stop.city}|${stop.id||stop.name}`;if(seen.has(key))return false;seen.add(key);return true}).slice(0,20)}
+function renderSearchResults(stops,query){const box=$('searchResults');box.hidden=false;box.innerHTML=stops.length?stops.map(stop=>`<button class="list-row" data-search-id="${esc(stop.id)}"><div class="list-main"><strong>${esc(stop.name)}</strong><small>${esc(stop.city==='Taipei'?'臺北市':'新北市')}</small></div><span class="text-button">查看</span></button>`).join(''):`<div class="empty">找不到「${esc(query)}」，請確認站牌或路線名稱，或改用附近站牌。</div>`}
+async function doSearch(){const query=$('searchInput').value.trim();if(!query){$('searchResults').hidden=true;$('searchResults').innerHTML='';return}$('searchResults').hidden=false;$('searchResults').innerHTML='<div class="empty">搜尋中…</div>';try{state.searchResults=await searchStops(query);renderSearchResults(state.searchResults,query)}catch(error){$('searchResults').innerHTML=`<div class="empty">搜尋失敗：${esc(error.message)}</div>`}}
+document.addEventListener('click',event=>{const action=event.target.closest('[data-action]')?.dataset;if(!action)return;const index=state.settings.stops.findIndex(item=>item.id===action.id);if(index<0)return;if(action.action.startsWith('delete')){if(!confirm(`確定刪除「${state.settings.stops[index].label}」？`))return;state.settings.stops.splice(index,1);saveSettings();renderStops();return}if(action.action.startsWith('edit')){openEditor(state.settings.stops[index]);return}if(action.action.startsWith('up')&&index>0){[state.settings.stops[index-1],state.settings.stops[index]]=[state.settings.stops[index],state.settings.stops[index-1]];saveSettings();renderStops()}})
+document.addEventListener('click',event=>{const nearbyId=event.target.closest('[data-nearby-id]')?.dataset.nearbyId;if(nearbyId){const stop=state.nearbyStops.find(item=>item.id===nearbyId);if(stop)showArrivals(stop)}const stopId=event.target.closest('[data-view-stop]')?.dataset.viewStop;if(stopId){const stop=state.settings.stops.find(item=>item.id===stopId);if(stop)showArrivals(stop,stop.label)}const searchId=event.target.closest('[data-search-id]')?.dataset.searchId;if(searchId){const stop=state.searchResults.find(item=>item.id===searchId);if(stop)showArrivals(stop)}})
+$('nearbyBtn').addEventListener('click',()=>{showPanel('nearbyPanel');locate()});$('retryLocationBtn').addEventListener('click',locate);$('stopsBtn').addEventListener('click',()=>{renderStops();showPanel('stopsPanel')});$('settingsTopBtn').addEventListener('click',()=>{showPanel('settingsPanel')});$('manageStopsBtn').addEventListener('click',()=>{renderStops();showPanel('stopsPanel')});$('addStopBtn').addEventListener('click',()=>openEditor());$('addRouteBtn').addEventListener('click',()=>addRouteField());$('closeEditorBtn').addEventListener('click',closeEditor);$('cancelEditorBtn').addEventListener('click',closeEditor);document.querySelectorAll('[data-close-panel]').forEach(button=>button.addEventListener('click',closePanels))
+$('searchForm').addEventListener('submit',event=>{event.preventDefault();doSearch()})
+$('editorForm').addEventListener('submit',event=>{event.preventDefault();const id=$('editId').value,item={id:id||uid('stop'),label:$('labelInput').value.trim(),name:$('nameInput').value.trim(),routes:[...document.querySelectorAll('.route-field')].map(row=>({route:row.querySelector('[data-route]').value.trim(),directionA:row.querySelector('[data-a]').value.trim(),directionB:row.querySelector('[data-b]').value.trim()})).filter(route=>route.route&&route.directionA&&route.directionB)};if(!item.label||!item.name||!item.routes.length){alert('請填寫名稱，並至少新增一條完整路線。');return}const index=state.settings.stops.findIndex(entry=>entry.id===id);if(index>=0)state.settings.stops[index]=item;else state.settings.stops.push(item);saveSettings();renderStops();closeEditor();setStatus('','設定已儲存','資料只存在這支裝置的瀏覽器中。')})
+$('backupBtn').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({app:'mybus',version:4,exportedAt:new Date().toISOString(),stops:state.settings.stops},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='mybus-settings.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});$('restoreBtn').addEventListener('click',()=>$('restoreInput').click());$('restoreInput').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data.stops))throw new Error();state.settings={stops:data.stops};saveSettings();renderStops();setStatus('','設定已匯入','本機設定已還原。')}catch{alert('這不是有效的 MyBUS 設定檔。')}event.target.value=''})
 renderStops();
