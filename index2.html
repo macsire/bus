@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#173f58" />
+<title>MyBUS 首頁試作 02</title>
+<style>
+:root{
+  --bg:#F0F4E2;
+  --bg-deep:#DDE6C5;
+  --card:#E5ECD0;
+  --ink:#11110F;
+  --muted:#4D4943;
+  --line:#A88C63;
+  --primary:#292623;
+  --primary-2:#A64739;
+  --accent:#A64739;
+  --soft:#EDF1DB;
+  --ginkgo:#F3D95F;
+  --ginkgo-light:#FBEA93;
+  --radius:22px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:
+    radial-gradient(circle at 12% 5%, rgba(255,255,255,.92), transparent 30%),
+    radial-gradient(circle at 88% 42%, rgba(219,208,189,.32), transparent 40%),
+    linear-gradient(145deg,#FCFAEF,#F2EDDF);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app{
+  width:min(100%,680px);
+  margin:0 auto;
+  padding:22px 18px 42px;
+}
+.brand{
+  text-align:center;
+  padding:10px 8px 20px;
+}
+.brand-mark{
+  margin:0;
+  font-weight:900;
+  letter-spacing:.12em;
+  color:var(--primary-2);
+  font-size:15px;
+}
+.brand h1{
+  margin:5px 0 4px;
+  font-size:32px;
+  line-height:1.15;
+}
+.brand p:last-child{
+  margin:0;
+  color:var(--muted);
+  font-size:15px;
+}
+.card{
+  background:
+    radial-gradient(circle at 12% 5%, rgba(255,255,255,.38), transparent 35%),
+    linear-gradient(145deg,#EAF0D8,var(--card));
+  border:2px solid #B8C39C;
+  border-radius:var(--radius);
+  padding:22px;
+  margin-bottom:16px;
+}
+.eyebrow{
+  color:var(--primary-2);
+  font-weight:800;
+  font-size:14px;
+  margin:0 0 6px;
+}
+h2{
+  margin:0;
+  font-size:26px;
+  line-height:1.25;
+}
+.helper{
+  color:var(--muted);
+  margin:8px 0 18px;
+  line-height:1.6;
+}
+label{
+  display:block;
+  font-weight:800;
+  margin:16px 0 8px;
+}
+input[type="text"]{
+  width:100%;
+  min-height:52px;
+  border:3px solid #343434;
+  border-radius:15px;
+  padding:12px 14px;
+  background:#fff;
+  color:var(--ink);
+}
+.location-row{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  align-items:center;
+}
+.location-box{
+  min-height:52px;
+  border:3px solid #343434;
+  border-radius:15px;
+  padding:12px 14px;
+  background:var(--soft);
+  display:flex;
+  align-items:center;
+  color:var(--muted);
+}
+.primary,.secondary,.ghost{
+  min-height:50px;
+  border-radius:15px;
+  padding:11px 16px;
+  font-weight:850;
+}
+.primary{
+  border:3px solid #343434;
+  background:#0C5446;
+  color:#fffaf0;
+}
+.secondary{
+  border:3px solid #343434;
+  background:white;
+  color:var(--primary);
+}
+.ghost{
+  border:3px solid #343434;
+  background:rgba(247,233,170,.62);
+  color:var(--primary);
+}
+.pref-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.pref{
+  display:flex;
+  gap:9px;
+  align-items:center;
+  font-weight:800;
+  border:3px solid #343434;
+  border-radius:15px;
+  padding:12px;
+  min-height:52px;
+  
+  background-color:#F9A825;
+  background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22160%22%20height%3D%22160%22%20viewBox%3D%220%200%20160%20160%22%3E%0A%20%20%3Cfilter%20id%3D%22paper%22%3E%0A%20%20%20%20%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.85%22%20numOctaves%3D%224%22%20seed%3D%227%22%20stitchTiles%3D%22stitch%22%2F%3E%0A%20%20%20%20%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%0A%20%20%20%20%3CfeComponentTransfer%3E%0A%20%20%20%20%20%20%3CfeFuncA%20type%3D%22table%22%20tableValues%3D%220%200.10%22%2F%3E%0A%20%20%20%20%3C%2FfeComponentTransfer%3E%0A%20%20%3C%2Ffilter%3E%0A%20%20%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20filter%3D%22url%28%23paper%29%22%20opacity%3D%220.32%22%2F%3E%0A%3C%2Fsvg%3E");
+  background-repeat:repeat;
+  background-size:160px 160px;
+  margin:0;
+}
+.pref input{
+  width:23px;
+  height:23px;
+  accent-color:var(--primary);
+}
+.action-stack{
+  display:grid;
+  gap:10px;
+  margin-top:20px;
+}
+.prompt-preview{
+  margin-top:18px;
+  border-radius:16px;
+  background:var(--soft);
+  border:1px solid var(--line);
+  padding:14px;
+}
+.prompt-preview summary{
+  font-weight:800;
+  cursor:pointer;
+}
+.prompt-preview pre{
+  white-space:pre-wrap;
+  word-break:break-word;
+  font:inherit;
+  font-size:14px;
+  line-height:1.65;
+  color:#425667;
+}
+.quick-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:16px;
+}
+.quick{
+  min-height:110px;
+  border:3px solid #343434;
+  border-radius:18px;
+  
+  background-color:#F9A825;
+  background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22160%22%20height%3D%22160%22%20viewBox%3D%220%200%20160%20160%22%3E%0A%20%20%3Cfilter%20id%3D%22paper%22%3E%0A%20%20%20%20%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.85%22%20numOctaves%3D%224%22%20seed%3D%227%22%20stitchTiles%3D%22stitch%22%2F%3E%0A%20%20%20%20%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22%2F%3E%0A%20%20%20%20%3CfeComponentTransfer%3E%0A%20%20%20%20%20%20%3CfeFuncA%20type%3D%22table%22%20tableValues%3D%220%200.10%22%2F%3E%0A%20%20%20%20%3C%2FfeComponentTransfer%3E%0A%20%20%3C%2Ffilter%3E%0A%20%20%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20filter%3D%22url%28%23paper%29%22%20opacity%3D%220.32%22%2F%3E%0A%3C%2Fsvg%3E");
+  background-repeat:repeat;
+  background-size:160px 160px;
+  padding:17px;
+  text-align:left;
+  color:var(--ink);
+}
+.quick span{
+  display:block;
+  font-size:26px;
+  margin-bottom:8px;
+}
+.quick strong{
+  display:block;
+  font-size:20px;
+}
+.quick small{
+  display:block;
+  margin-top:5px;
+  color:var(--muted);
+}
+.note{
+  text-align:center;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.6;
+  padding:3px 16px 0;
+}
+.status{
+  margin-top:12px;
+  min-height:24px;
+  color:var(--primary-2);
+  font-weight:700;
+  font-size:14px;
+}
+@media (max-width:520px){
+  .app{padding:14px 12px 34px}
+  .card{padding:18px 16px}
+  .brand h1{font-size:28px}
+  h2{font-size:24px}
+  .pref-grid,.quick-grid{grid-template-columns:1fr}
+  .location-row{grid-template-columns:1fr}
+}
+.bus-only-card{
+  background-color:#DBD0BD;
+  background-image:none;
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="brand">
+    <p class="brand-mark">MyBUS</p>
+    <h1>今天要去哪裡？</h1>
+    <p>把需求整理好，再交給你習慣的 AI 或地圖。</p>
+  </header>
+
+  <section class="card" aria-labelledby="planTitle">
+    <p class="eyebrow">幫我規劃</p>
+    <h2 id="planTitle">說目的地就好</h2>
+    <p class="helper">MyBUS 幫你把需求整理成提示詞；路線判斷交給手機裡的 AI 或 Google Maps。</p>
+
+    <label for="destination">我要去</label>
+    <input id="destination" type="text" placeholder="例如：台北榮民總醫院" autocomplete="off" />
+
+    <label>從哪裡出發</label>
+    <div class="location-row">
+      <div id="originText" class="location-box">尚未取得目前位置</div>
+      <button id="locateBtn" class="ghost" type="button">📍 使用目前位置</button>
+    </div>
+
+    <label>希望怎麼走</label>
+    <div class="pref-grid">
+      <label class="pref"><input type="checkbox" value="少走路" checked />少走路</label>
+      <label class="pref"><input type="checkbox" value="少轉乘" checked />少轉乘</label>
+      <label class="pref"><input type="checkbox" value="優先公車" />優先公車</label>
+      <label class="pref"><input type="checkbox" value="避免樓梯" />避免樓梯</label>
+    </div>
+
+    <div class="action-stack">
+      <button id="aiBtn" class="primary" type="button">交給 AI 幫我規劃</button>
+      <button id="mapBtn" class="secondary" type="button">直接開 Google Maps</button>
+      <button id="copyBtn" class="ghost" type="button">複製提示詞</button>
+    </div>
+
+    <div id="status" class="status" aria-live="polite"></div>
+
+    <details class="prompt-preview">
+      <summary>看看 MyBUS 會問 AI 什麼</summary>
+      <pre id="promptText"></pre>
+    </details>
+  </section>
+
+  <section class="card bus-only-card">
+    <p class="eyebrow">只想查公車</p>
+    <h2>快速查到站</h2>
+    <div class="quick-grid">
+      <button class="quick" type="button" onclick="goCurrent('nearby')">
+        <span>📍</span>
+        <strong>附近站牌</strong>
+        <small>查附近公車還有多久到</small>
+      </button>
+      <button class="quick" type="button" onclick="goCurrent('favorites')">
+        <span>⭐</span>
+        <strong>我的常用</strong>
+        <small>打開常搭站牌</small>
+      </button>
+    </div>
+  </section>
+
+  <p class="note">
+    試作頁 index02.html｜MyBUS 不自行計算完整轉乘路線。<br>
+    定位只在你按下「使用目前位置」後取得，這個試作頁不儲存定位紀錄。
+  </p>
+</main>
+
+<script>
+let currentPosition = null;
+
+const $ = id => document.getElementById(id);
+
+function selectedPreferences(){
+  return [...document.querySelectorAll('.pref input:checked')].map(el => el.value);
+}
+
+function buildPrompt(){
+  const destination = $('destination').value.trim() || '（請先詢問我要去哪裡）';
+  const prefs = selectedPreferences();
+  const origin = currentPosition
+    ? `目前位置（緯度 ${currentPosition.lat.toFixed(6)}、經度 ${currentPosition.lon.toFixed(6)}）`
+    : '我的目前位置（如果你無法取得，請先問我所在位置）';
+
+  const lines = [
+    '請幫我規劃適合長輩使用的交通方式。',
+    '',
+    `出發：${origin}`,
+    `目的地：${destination}`,
+    '',
+    '偏好：',
+    ...(prefs.length ? prefs.map(x => `- ${x}`) : ['- 沒有特別偏好']),
+    '',
+    '請優先提供容易理解、步行與轉乘負擔較低的方案。',
+    '如果需要搭公車，請清楚說明要到哪個站牌、搭哪一路、往哪個方向。',
+    '如果站牌位置可能混淆，請提醒我用地圖確認道路哪一側。',
+    '最後請提供可在 Google Maps 開啟的地點或路線連結。'
+  ];
+  return lines.join('\\n');
+}
+
+function refreshPrompt(){
+  $('promptText').textContent = buildPrompt();
+}
+
+$('destination').addEventListener('input', refreshPrompt);
+document.querySelectorAll('.pref input').forEach(el => el.addEventListener('change', refreshPrompt));
+
+$('locateBtn').addEventListener('click', () => {
+  if (!navigator.geolocation){
+    $('status').textContent = '這個瀏覽器不支援定位。';
+    return;
+  }
+
+  $('status').textContent = '正在取得位置…';
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      currentPosition = {
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude
+      };
+      $('originText').textContent = '已取得目前位置';
+      $('status').textContent = '位置已取得；只有在你按分享或開地圖時才會使用。';
+      refreshPrompt();
+    },
+    () => {
+      $('status').textContent = '無法取得位置，請確認瀏覽器定位權限。';
+    },
+    { enableHighAccuracy:true, timeout:12000, maximumAge:60000 }
+  );
+});
+
+$('copyBtn').addEventListener('click', async () => {
+  const text = buildPrompt();
+  try {
+    await navigator.clipboard.writeText(text);
+    $('status').textContent = '提示詞已複製。';
+  } catch {
+    window.prompt('複製以下提示詞：', text);
+  }
+});
+
+$('aiBtn').addEventListener('click', async () => {
+  const text = buildPrompt();
+
+  if (navigator.share){
+    try {
+      await navigator.share({
+        title: 'MyBUS 交通規劃',
+        text
+      });
+      return;
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    $('status').textContent = '已複製提示詞，請貼到你習慣的 AI App。';
+  } catch {
+    window.prompt('複製以下提示詞到 AI App：', text);
+  }
+});
+
+$('mapBtn').addEventListener('click', () => {
+  const destination = $('destination').value.trim();
+
+  if (!destination){
+    $('status').textContent = '請先輸入目的地。';
+    $('destination').focus();
+    return;
+  }
+
+  const params = new URLSearchParams({
+    api: '1',
+    destination,
+    travelmode: 'transit'
+  });
+
+  if (currentPosition){
+    params.set('origin', `${currentPosition.lat},${currentPosition.lon}`);
+  }
+
+  window.open(`https://www.google.com/maps/dir/?${params.toString()}`, '_blank', 'noopener');
+});
+
+function goCurrent(mode){
+  const target = mode === 'nearby' ? 'nearbyBtn' : 'stopsBtn';
+  sessionStorage.setItem('mybus.index02.action', target);
+  window.location.href = './index.html';
+}
+
+refreshPrompt();
+</script>
+</body>
+</html>
