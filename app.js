@@ -87,6 +87,9 @@ async function fetchJson(path) {
     throw new Error(`API ${res.status}`);
   }
   if (!res.ok || data?.error) {
+    if (res.status === 429 || data?.status === 429) {
+      throw new Error('TDX 暫時達到查詢上限，請稍候再試。');
+    }
     throw new Error(data?.error || `API ${res.status}`);
   }
   return data;
@@ -641,11 +644,11 @@ async function searchStationGroups(query) {
   return [...groups.values()].slice(0, 12);
 }
 
-async function searchRoutes(query) {
+async function searchRoutes(query, cities = ['Taipei', 'NewTaipei']) {
   const q = normalize(query);
 
   const results = await Promise.allSettled(
-    ['Taipei', 'NewTaipei'].map(async city => {
+    cities.map(async city => {
       const routes = await searchCityRoutes(city, query);
       if (!Array.isArray(routes)) return [];
 
@@ -673,6 +676,14 @@ async function searchRoutes(query) {
 }
 
 async function searchAll(query) {
+  const normalized = normalize(query);
+
+  // 「新北 F」是新北市公車分類，不需要再向臺北市查詢，
+  // 也不需要同時查站牌；減少一次搜尋造成的 TDX 429 風險。
+  if (normalized === 'f' || /^f\d/.test(normalized)) {
+    return searchRoutes(query, ['NewTaipei']);
+  }
+
   const [routes, stations] = await Promise.all([
     searchRoutes(query),
     searchStationGroups(query)
