@@ -50,6 +50,11 @@ function tdxName(value) {
   return value?.Zh_tw || value?.En || '';
 }
 
+function routeName(row) {
+  return tdxName(row?.RouteName) || tdxName(row?.SubRouteName) ||
+    String(row?.route || row || '').trim();
+}
+
 function cityLabel(city) {
   return city === 'Taipei' ? '臺北市' : city === 'NewTaipei' ? '新北市' : '';
 }
@@ -316,16 +321,18 @@ async function getDestinationForEta(row, city) {
     const direction = Number(row.Direction);
     const stopUID = row.StopUID;
 
+    // 部分新北 F 路線的 stop 回應沒有 Direction；先用實際站序比對，
+    // 否則會把同一路線的另一個方向誤當成目前公車方向。
     let record = records.find(item =>
-      Number(item.Direction) === direction &&
+      (!Number.isFinite(direction) || !Number.isFinite(Number(item.Direction)) ||
+        Number(item.Direction) === direction) &&
       Array.isArray(item.Stops) &&
       item.Stops.some(stop => stop.StopUID === stopUID)
     );
 
     if (!record) {
       record = records.find(item =>
-        Number(item.Direction) === direction &&
-        Array.isArray(item.Stops)
+        Array.isArray(item.Stops) && item.Stops.some(stop => stop.StopUID === stopUID)
       );
     }
 
@@ -349,7 +356,7 @@ async function renderLiveArrivals(rows, stop) {
 
   const unique = [...new Map(
     matched.map(row => [
-      `${tdxName(row.RouteName)}|${row.StopUID || ''}|${row.Direction}`,
+      `${routeName(row)}|${row.StopUID || ''}|${row.Direction}`,
       row
     ])
   ).values()];
@@ -362,16 +369,16 @@ async function renderLiveArrivals(rows, stop) {
   const directions = new Map();
 
   await Promise.all(sorted.map(async row => {
-    const key = `${tdxName(row.RouteName)}|${row.Direction}|${row.StopUID || ''}`;
+    const key = `${routeName(row)}|${row.Direction}|${row.StopUID || ''}`;
     if (!directions.has(key)) {
       directions.set(key, await getDestinationForEta(row, stop.city));
     }
   }));
 
   state.lastArrivals = sorted.map(row => {
-    const key = `${tdxName(row.RouteName)}|${row.Direction}|${row.StopUID || ''}`;
+    const key = `${routeName(row)}|${row.Direction}|${row.StopUID || ''}`;
     return {
-      route: tdxName(row.RouteName),
+      route: routeName(row),
       direction: directions.get(key) || '行駛方向',
       minutes: etaMinutes(row),
       status: row.StopStatus
@@ -389,11 +396,11 @@ async function renderLiveArrivals(rows, stop) {
         min == null ? '時間未提供' :
         `${min} 分`;
 
-      const key = `${tdxName(row.RouteName)}|${row.Direction}|${row.StopUID || ''}`;
+      const key = `${routeName(row)}|${row.Direction}|${row.StopUID || ''}`;
 
       return `
         <article class="arrival-row">
-          <div class="route-number">${esc(tdxName(row.RouteName))}</div>
+          <div class="route-number">${esc(routeName(row))}</div>
           <div>
             <strong>${esc(directions.get(key) || '行駛方向')}</strong>
             <div class="route-destination">${esc(stop.name)}｜官方即時資料</div>
@@ -759,7 +766,9 @@ async function renderRouteSummary(item) {
 
     for (const record of usable) {
       const s = summarizeDirection(record);
-      const key = `${record.Direction}|${s.first}|${s.last}`;
+      // F 路線常有相同起訖點或缺少 Direction；SubRouteUID 才是穩定識別。
+      const key = record.SubRouteUID || record.RouteUID ||
+        `${record.Direction ?? ''}|${s.first}|${s.last}|${s.count}`;
       if (seen.has(key)) continue;
       seen.add(key);
       unique.push({ ...record, _summary: s });
