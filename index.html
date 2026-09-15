@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#173f58" />
+<meta name="description" content="MyBUS 我的公車時刻表｜雙北公車即時到站與常用站牌查詢" />
+<title>MyBUS 我的公車時刻表</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<main class="app-frame">
+
+<header class="brand-header" style="position:relative;">
+<p class="brand-mark">MyBUS</p>
+<h1>我的公車時刻表</h1>
+<p class="brand-subtitle">臺北・新北｜即時到站查詢</p>
+<button id="settingsTopBtn" class="text-button" type="button" aria-label="設定與備份"
+  style="position:absolute; top:0; right:0; font-size:20px; line-height:1;">⚙️</button>
+</header>
+
+<section class="home-card" aria-labelledby="homeTitle">
+<div class="home-heading">
+<p class="eyebrow">今天要去哪裡？</p>
+<h2 id="homeTitle">查到站時間</h2>
+</div>
+
+<form id="searchForm" class="form-grid" style="margin-bottom:12px;" autocomplete="off">
+<label for="searchInput" class="sr-only">搜尋站牌或路線名稱</label>
+<input id="searchInput" type="search" placeholder="輸入站牌名稱或路線，例如 南京復興、306" />
+<button id="searchBtn" class="primary-button full-button" type="submit">搜尋</button>
+</form>
+<div id="searchResults" class="stack-list" hidden></div>
+
+<div class="main-actions" aria-label="常用功能">
+<button id="nearbyBtn" class="feature-button location" type="button">
+<span class="feature-icon" aria-hidden="true">📍</span>
+<strong>附近站牌</strong>
+<small>用目前位置尋找</small>
+</button>
+<button id="stopsBtn" class="feature-button bus" type="button">
+<span class="feature-icon" aria-hidden="true">⭐</span>
+<strong>我的常用</strong>
+<small>常搭的站牌</small>
+</button>
+</div>
+<p class="privacy-note">定位只會在你按下「附近站牌」後使用，不會保存定位紀錄。</p>
+</section>
+
+<section id="statusCard" class="status-card" aria-live="polite">
+<span id="statusDot" class="status-dot"></span>
+<div>
+<strong id="statusTitle">準備查詢</strong>
+<p id="statusText">請選擇上方功能，或直接搜尋站牌／路線。</p>
+</div>
+</section>
+
+<section id="nearbyPanel" class="content-panel" hidden aria-labelledby="nearbyTitle">
+<div class="section-heading">
+<div><p class="eyebrow">附近站牌</p><h2 id="nearbyTitle">找我附近的公車站</h2></div>
+<button class="text-button" data-close-panel="nearbyPanel" type="button">關閉</button>
+</div>
+<p id="locationMessage" class="helper-text">按下按鈕後，瀏覽器才會詢問定位權限。</p>
+<button id="retryLocationBtn" class="primary-button full-button" type="button">📍 取得目前位置</button>
+<div id="nearbyList" class="stack-list"></div>
+</section>
+
+<section id="stopsPanel" class="content-panel" hidden aria-labelledby="stopsTitle">
+<div class="section-heading">
+<div><p class="eyebrow">我的常用</p><h2 id="stopsTitle">常搭的站牌</h2></div>
+<button class="text-button" data-close-panel="stopsPanel" type="button">關閉</button>
+</div>
+<div id="stopList" class="stack-list"></div>
+<button id="addStopBtn" class="secondary-button full-button" type="button">＋ 新增常用站牌</button>
+</section>
+
+<section id="settingsPanel" class="content-panel" hidden aria-labelledby="settingsTitle">
+<div class="section-heading">
+<div><p class="eyebrow">設定</p><h2 id="settingsTitle">設定與備份</h2></div>
+<button class="text-button" data-close-panel="settingsPanel" type="button">關閉</button>
+</div>
+<div class="settings-menu">
+<button id="manageStopsBtn" class="settings-link" type="button">
+<span><strong>管理常用站牌</strong><small>新增、編輯、刪除與排序</small></span><b>›</b>
+</button>
+</div>
+<div class="backup-box">
+<strong>備份本機設定</strong>
+<p>常用站牌只存在這支裝置，可手動備份成 JSON 檔，再存入 iCloud Drive。</p>
+<div class="button-row">
+<button id="backupBtn" class="secondary-button" type="button">備份設定</button>
+<button id="restoreBtn" class="secondary-button" type="button">匯入設定</button>
+<input id="restoreInput" type="file" accept="application/json,.json" hidden />
+</div>
+</div>
+</section>
+
+<section id="editorPanel" class="content-panel" hidden aria-labelledby="editorTitle">
+<div class="section-heading">
+<div><p class="eyebrow">編輯</p><h2 id="editorTitle">新增常用站牌</h2></div>
+<button id="closeEditorBtn" class="text-button" type="button">關閉</button>
+</div>
+<form id="editorForm" class="form-grid">
+<input id="editId" type="hidden" />
+<label for="labelInput">按鈕名稱</label>
+<input id="labelInput" required placeholder="例如：家附近" />
+<label for="nameInput">站牌名稱</label>
+<input id="nameInput" required placeholder="例如：民權吉林路口" />
+<div id="routeEditor">
+<div class="form-row-title">
+<strong>常用路線與方向</strong>
+<span>每條路線填兩個方向</span>
+</div>
+<div id="routeFields"></div>
+<button id="addRouteBtn" class="secondary-button" type="button">＋ 新增一條路線</button>
+</div>
+<div class="form-actions">
+<button class="primary-button" type="submit">儲存設定</button>
+<button id="cancelEditorBtn" class="secondary-button" type="button">取消</button>
+</div>
+</form>
+</section>
+
+<section id="resultPanel" class="result-panel" aria-labelledby="resultTitle">
+<div class="section-heading">
+<div><p class="eyebrow">即時到站</p><h2 id="resultTitle">到站查詢</h2></div>
+<span id="resultTag" class="tag">尚未選擇</span>
+</div>
+<div id="arrivalList" class="arrival-list">
+<div class="empty">搜尋站牌／路線，或選擇附近站牌、我的常用後，這裡會顯示即時到站資訊。</div>
+</div>
+</section>
+
+<section class="data-note">
+<strong>v0.50a</strong>
+<p>MyBUS 只做「查到站時間」：搜尋站牌／路線、附近站牌、我的常用，三條路都導向即時到站結果。站牌、路線與即時資料改由大臺北公車官方資料服務提供；轉乘規劃不納入 MyBUS。</p>
+</section>
+
+<footer>
+<span>MyBUS 我的公車時刻表</span>
+<span>手機直式優先</span>
+</footer>
+</main>
+<script src="./app.js" defer></script>
+</body>
+</html>
