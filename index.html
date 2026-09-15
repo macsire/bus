@@ -12,9 +12,8 @@
 <main class="app-frame">
 
 <header class="brand-header" style="position:relative;">
-<p class="brand-mark">MyBUS</p>
-<h1>我的公車時刻表</h1>
-<p class="brand-subtitle">臺北・新北｜即時到站查詢</p>
+<h1>MyBUS 找公車</h1>
+<p class="brand-subtitle">查詢公車到站時間</p>
 <button id="settingsTopBtn" class="text-button" type="button" aria-label="設定與備份"
   style="position:absolute; top:0; right:0; font-size:20px; line-height:1;">⚙️</button>
 </header>
@@ -52,8 +51,9 @@
 <button class="route-key" type="button" data-route-prefix="F">新巴士 F</button>
 <button class="route-key" type="button" data-category="跳蛙">跳蛙</button>
 </div>
-<div class="route-category-row row-one">
+<div class="route-category-row row-other-actions">
 <button class="route-key other" type="button" data-category="其他">其他（觀光、花季、懷恩⋯）</button>
+<button id="clearRouteFilterBtn" class="route-key clear" type="button">清除</button>
 </div>
 </div>
 <div id="categoryOptions" class="category-options" hidden></div>

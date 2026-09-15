@@ -53,7 +53,10 @@ const CATEGORY_OPTIONS = {
   小: { title: '小型公車：請輸入路線名稱或編號', query: '小' },
   市民小巴: { title: '市民小巴：請輸入路線名稱或編號', query: '市民小巴' },
   跳蛙: { title: '跳蛙：請輸入路線名稱或起訖點', query: '跳蛙' },
-  其他: { title: '其他特殊路線', options: ['觀光', '花季', '懷恩'] }
+  其他: {
+    title: '其他特殊路線',
+    options: ['觀光', '花季', '假日', '活動專車', '兒童樂園', '停車場接駁', '懷恩', '其他接駁']
+  }
 };
 
 function loadSettings() {
@@ -152,6 +155,17 @@ function etaMinutes(row) {
     return min >= 0 ? min : null;
   }
   return null;
+}
+
+function etaStatus(row, minutes) {
+  // TDX StopStatus：1 尚未發車、3 末班已過；2 為交管不停靠，不能當成資料遺失。
+  const stopStatus = Number(row.StopStatus);
+  if (stopStatus === 1) return '尚未發車';
+  if (stopStatus === 3) return '末班已過';
+  if (stopStatus === 2) return '暫不停靠';
+  if (minutes === 0) return '即將到站';
+  if (minutes != null) return `${minutes} 分`;
+  return '即時資料暫時無法取得';
 }
 
 function haversine(a, b) {
@@ -441,16 +455,12 @@ async function renderLiveArrivals(rows, stop) {
   } else {
     $('arrivalList').innerHTML = sorted.map(row => {
       const min = etaMinutes(row);
-      const status =
-        row.StopStatus === 1 ? '尚未發車' :
-        min === 0 ? '即將到站' :
-        min == null ? '時間未提供' :
-        `${min} 分`;
+      const status = etaStatus(row, min);
 
       const key = `${routeName(row)}|${row.Direction}|${row.StopUID || ''}`;
 
       return `
-        <article class="arrival-row">
+      <article class="arrival-row">
           <div class="route-number">${esc(routeName(row))}</div>
           <div>
             <strong>${esc(directions.get(key) || '行駛方向')}</strong>
@@ -793,8 +803,8 @@ function renderSearchStopGroup(group) {
         data-search-stop="${esc(stop.id)}"
         data-search-city="${esc(stop.city)}">
         <div class="list-main">
-          <strong>${group.members.length > 1 ? `候車點 ${index + 1}` : esc(stop.name)}</strong>
-          <small>${esc(stop.name)}</small>
+          <strong>${index + 1}. ${esc(stop.name)}</strong>
+          <small>站牌｜${esc(cityLabel(stop.city))}</small>
         </div>
         <span class="text-button">查到站</span>
       </button>
@@ -881,29 +891,32 @@ function renderRouteStops(item, index) {
   const stops = record.Stops || [];
 
   $('searchResults').innerHTML = `
-    <div class="list-row">
+    <div class="list-row route-header-row">
       <div class="list-main">
         <strong>
-          ${esc(item.name)}｜
-          ${record._summary.last ? `往 ${esc(record._summary.last)}` : '行駛方向'}
+          ${esc(item.name)}
         </strong>
-        <small>${stops.length} 站</small>
+        <small>${record._summary.last ? `往 ${esc(record._summary.last)}` : '行駛方向'}｜${stops.length} 站</small>
       </div>
       <button class="mini-button" data-route-summary="${esc(item.key)}">返回方向</button>
     </div>
 
-    ${stops.map(stop => `
-      <button class="list-row"
+    <div class="timeline-heading">沿途站名</div>
+    <div class="route-timeline">
+    ${stops.map((stop, stopIndex) => `
+      <button class="list-row timeline-stop"
         data-route-stop="${esc(stop.StopUID || '')}"
         data-route-stop-city="${esc(item.city)}"
         data-route-stop-name="${esc(tdxName(stop.StopName))}"
         data-route-name="${esc(item.name)}">
+        <span class="timeline-node" aria-hidden="true">${stopIndex + 1}</span>
         <div class="list-main">
           <strong>${esc(tdxName(stop.StopName))}</strong>
         </div>
         <span class="text-button">查到站</span>
       </button>
     `).join('')}
+    </div>
   `;
 }
 
@@ -1138,6 +1151,26 @@ document.querySelectorAll('[data-route-prefix], [data-category]').forEach(button
     input.placeholder = `輸入${prefix}字頭路線，例如 ${prefix}1、${prefix}7`;
     input.focus();
   });
+});
+
+$('clearRouteFilterBtn')?.addEventListener('click', () => {
+  const input = $('searchInput');
+  if (input) {
+    input.value = '';
+    input.placeholder = '輸入站牌名稱或路線，例如 南京復興、306';
+  }
+  document.querySelectorAll('.route-key').forEach(item => item.classList.remove('selected'));
+  if ($('categoryOptions')) {
+    $('categoryOptions').hidden = true;
+    $('categoryOptions').innerHTML = '';
+  }
+  if ($('searchResults')) {
+    $('searchResults').hidden = true;
+    $('searchResults').innerHTML = '';
+  }
+  state.searchResults = [];
+  setStatus('', '準備查詢', '請選擇上方功能，或直接搜尋站牌／路線。');
+  input?.focus();
 });
 
 document.addEventListener('click', event => {
