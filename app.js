@@ -279,82 +279,25 @@ function favoriteFromSelected() {
   setStatus('success', '已加入常用', `已收藏「${stop.name}」。`);
 }
 
-/* ---------- AI 分享 ---------- */
-
-function ensureResultActions() {
-  let box = $('resultActions');
-  if (box) return box;
-
-  box = document.createElement('div');
-  box.id = 'resultActions';
-  box.className = 'button-row';
-  box.style.marginTop = '12px';
-  $('arrivalList')?.insertAdjacentElement('afterend', box);
-  return box;
-}
-
-function buildAiText() {
-  const stop = state.selected;
-  if (!stop || stop.kind === 'route') return '';
-
-  const lines = [
-    '請根據以下即時公車資訊協助我規劃交通方式。',
-    `目前站牌：${stop.name}${stop.city ? `（${cityLabel(stop.city)}）` : ''}`
-  ];
-
-  if (state.lastArrivals.length) {
-    lines.push('目前到站資訊：');
-    state.lastArrivals.slice(0, 8).forEach(item => {
-      const time =
-        item.status === 1 ? '尚未發車' :
-        item.minutes === 0 ? '即將到站' :
-        item.minutes == null ? '時間未提供' :
-        `${item.minutes} 分`;
-      lines.push(`- ${item.route}｜${item.direction}｜${time}`);
-    });
-  }
-
-  lines.push('請先問我的目的地，再建議較簡單的搭車或轉乘方式。');
-  return lines.join('\n');
-}
-
-async function handoffToAi() {
-  const text = buildAiText();
-  if (!text) return;
-
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: 'MyBUS 公車資訊', text });
-      return;
-    } catch (err) {
-      if (err?.name === 'AbortError') return;
-    }
-  }
-
-  try {
-    await navigator.clipboard.writeText(text);
-    alert('已複製目前公車資訊。請開啟你慣用的 AI App 貼上即可。');
-  } catch {
-    window.prompt('複製以下內容到 AI App：', text);
-  }
-}
+/* ---------- 到站結果操作 ---------- */
 
 function renderResultActions() {
-  const box = ensureResultActions();
-  if (!box) return;
+  let box = $('resultActions');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'resultActions';
+    box.className = 'button-row';
+    box.style.marginTop = '12px';
+    $('arrivalList')?.insertAdjacentElement('afterend', box);
+  }
 
   if (!state.selected || state.selected.kind === 'route') {
     box.innerHTML = '';
     return;
   }
 
-  box.innerHTML = `
-    <button id="favoriteCurrentBtn" class="secondary-button" type="button">☆ 加入常用</button>
-    <button id="aiHandoffBtn" class="secondary-button" type="button">交給 AI 規劃</button>
-  `;
-
+  box.innerHTML = '<button id="favoriteCurrentBtn" class="secondary-button" type="button">☆ 加入常用</button>';
   $('favoriteCurrentBtn')?.addEventListener('click', favoriteFromSelected);
-  $('aiHandoffBtn')?.addEventListener('click', handoffToAi);
 }
 
 /* ---------- ETA 與方向 ---------- */
@@ -1066,6 +1009,22 @@ document.querySelectorAll('[data-close-panel]').forEach(button => {
 $('searchForm')?.addEventListener('submit', event => {
   event.preventDefault();
   doSearch();
+});
+
+document.querySelectorAll('[data-route-prefix]').forEach(button => {
+  button.addEventListener('click', () => {
+    const prefix = button.dataset.routePrefix;
+    const input = $('searchInput');
+    if (!input) return;
+
+    document.querySelectorAll('.route-key').forEach(item => item.classList.remove('selected'));
+    button.classList.add('selected');
+    input.value = prefix === '__numeric__' || prefix === '__other__' ? '' : prefix;
+    input.placeholder = prefix === '__numeric__' ? '輸入路線號碼，例如 265、306、947' :
+      prefix === '__other__' ? '輸入其他路線名稱或編號' : `輸入${prefix}字頭路線，例如 ${prefix}1、${prefix}7`;
+    input.focus();
+    if (prefix !== '__numeric__' && prefix !== '__other__') doSearch();
+  });
 });
 
 /* ---------- 常用名稱編輯 ---------- */
