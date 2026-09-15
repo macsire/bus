@@ -33,20 +33,30 @@
 <div class="route-keyboard" aria-label="公車路線分類快速輸入">
 <div class="keyboard-heading"><strong>路線分類快速輸入</strong><span>點選後可再補路線號碼</span></div>
 <div id="routeCategoryGrid" class="route-category-grid">
-<button class="route-key route-color red" type="button" data-route-prefix="紅">紅</button>
+<div class="route-category-row row-five">
 <button class="route-key route-color blue" type="button" data-route-prefix="藍">藍</button>
+<button class="route-key route-color red" type="button" data-route-prefix="紅">紅</button>
 <button class="route-key route-color green" type="button" data-route-prefix="綠">綠</button>
 <button class="route-key route-color brown" type="button" data-route-prefix="棕">棕</button>
-<button class="route-key route-color yellow" type="button" data-route-prefix="黃">黃</button>
-<button class="route-key" type="button" data-route-prefix="幹線">幹線</button>
-<button class="route-key" type="button" data-route-prefix="接駁">接駁</button>
-<button class="route-key" type="button" data-route-prefix="通勤">通勤</button>
-<button class="route-key" type="button" data-route-prefix="F">新北F</button>
-<button class="route-key" type="button" data-route-prefix="小">北市小</button>
-<button class="route-key" type="button" data-route-prefix="跳蛙">跳蛙</button>
-<button class="route-key" type="button" data-route-prefix="懷恩">懷恩</button>
-<button class="route-key other other-wide" type="button" data-route-prefix="__other__">其他路線</button>
+<button class="route-key route-color yellow" type="button" data-route-prefix="橘">橘</button>
 </div>
+<div class="route-category-row row-four">
+<button class="route-key" type="button" data-category="幹線">幹線</button>
+<button class="route-key" type="button" data-category="通勤">通勤</button>
+<button class="route-key" type="button" data-category="輕軌">輕軌</button>
+<button class="route-key" type="button" data-category="先導">先導</button>
+</div>
+<div class="route-category-row row-four">
+<button class="route-key" type="button" data-category="小">小</button>
+<button class="route-key" type="button" data-category="市民小巴">市民小巴</button>
+<button class="route-key" type="button" data-route-prefix="F">新巴士 F</button>
+<button class="route-key" type="button" data-category="跳蛙">跳蛙</button>
+</div>
+<div class="route-category-row row-one">
+<button class="route-key other" type="button" data-category="其他">其他（觀光、花季、懷恩⋯）</button>
+</div>
+</div>
+<div id="categoryOptions" class="category-options" hidden></div>
 </div>
 <div id="searchResults" class="stack-list" hidden></div>
 

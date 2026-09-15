@@ -15,6 +15,47 @@ const routeListCache = new Map();
 const routeStopCache = new Map();
 const $ = id => document.getElementById(id);
 
+// 本地只保存分類與非數字路線的搜尋別名；站序與即時到站仍由 API 取得。
+const LOCAL_ROUTE_INDEX = [
+  {
+    name: '景美-榮總(快)',
+    city: 'Taipei',
+    category: '快速',
+    aliases: ['景美-榮總', '景美—榮總', '景美榮總']
+  },
+  {
+    name: '629汐東捷運先導公車',
+    query: '629',
+    city: 'NewTaipei',
+    category: '先導',
+    aliases: ['629先導公車', '汐東捷運先導公車']
+  },
+  {
+    name: '985萬大樹林先導公車',
+    query: '985',
+    city: 'NewTaipei',
+    category: '先導',
+    aliases: ['985先導公車', '萬大樹林先導公車']
+  },
+  {
+    name: '藍海2線先導公車',
+    city: 'NewTaipei',
+    category: '先導',
+    aliases: ['藍海2線', '藍海2線先導']
+  }
+];
+
+const CATEGORY_OPTIONS = {
+  幹線: { title: '幹線：請輸入路線名稱或編號', query: '幹線' },
+  通勤: { title: '通勤路線', options: ['內科', '南軟'] },
+  輕軌: { title: '輕軌接駁：請輸入路線名稱或編號', query: '輕軌' },
+  先導: { title: '先導公車', local: LOCAL_ROUTE_INDEX.filter(item => item.category === '先導') },
+  小: { title: '小型公車：請輸入路線名稱或編號', query: '小' },
+  市民小巴: { title: '市民小巴：請輸入路線名稱或編號', query: '市民小巴' },
+  跳蛙: { title: '跳蛙：請輸入路線名稱或起訖點', query: '跳蛙' },
+  其他: { title: '其他特殊路線', options: ['觀光', '花季', '懷恩'] }
+};
+
 function loadSettings() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
@@ -44,6 +85,13 @@ function esc(value) {
 
 function normalize(value) {
   return String(value || '').replace(/[臺台\s]/g, '').toLowerCase();
+}
+
+function localRouteMatch(query) {
+  const q = normalize(query);
+  return LOCAL_ROUTE_INDEX.find(item =>
+    normalize(item.name) === q || item.aliases.some(alias => normalize(alias) === q)
+  );
 }
 
 function tdxName(value) {
@@ -645,15 +693,18 @@ async function searchStationGroups(query) {
 }
 
 async function searchRoutes(query, cities = ['Taipei', 'NewTaipei']) {
-  const q = normalize(query);
+  const local = localRouteMatch(query);
+  const routeQuery = local?.query || local?.name || query;
+  const q = normalize(routeQuery);
 
   const results = await Promise.allSettled(
     cities.map(async city => {
-      const routes = await searchCityRoutes(city, query);
+      if (local && city !== local.city) return [];
+      const routes = await searchCityRoutes(city, routeQuery);
       if (!Array.isArray(routes)) return [];
 
       return routes
-        .filter(route => normalize(tdxName(route.RouteName)).includes(q))
+        .filter(route => normalize(tdxName(route.RouteName)).startsWith(q))
         .map(route => ({
           kind: 'route',
           key: `${city}|route|${tdxName(route.RouteName)}`,
@@ -777,9 +828,13 @@ async function renderRouteSummary(item) {
 
     for (const record of usable) {
       const s = summarizeDirection(record);
-      // F 路線常有相同起訖點或缺少 Direction；SubRouteUID 才是穩定識別。
-      const key = record.SubRouteUID || record.RouteUID ||
-        `${record.Direction ?? ''}|${s.first}|${s.last}|${s.count}`;
+      // 同一個 SubRouteUID 可能包含往返兩個 Direction（例如藍22），
+      // F 路線也可能缺少 Direction，因此兩者都要納入識別。
+      const key = record.SubRouteUID
+        ? `${record.SubRouteUID}|${record.Direction ?? ''}`
+        : record.RouteUID
+          ? `${record.RouteUID}|${record.Direction ?? ''}|${s.first}|${s.last}`
+          : `${record.Direction ?? ''}|${s.first}|${s.last}|${s.count}`;
       if (seen.has(key)) continue;
       seen.add(key);
       unique.push({ ...record, _summary: s });
@@ -870,6 +925,39 @@ async function doSearch() {
   } catch (err) {
     $('searchResults').innerHTML =
       `<div class="empty">搜尋失敗：${esc(err.message)}</div>`;
+  }
+}
+
+function renderCategoryOptions(category) {
+  const box = $('categoryOptions');
+  const config = CATEGORY_OPTIONS[category];
+  if (!box || !config) return;
+
+  const localItems = config.local || [];
+  const options = config.options || [];
+  box.hidden = false;
+  box.innerHTML = `
+    <strong class="category-options-title">${esc(config.title)}</strong>
+    ${localItems.length ? `
+      <div class="category-option-grid">
+        ${localItems.map(item => `
+          <button class="category-option" type="button"
+            data-category-query="${esc(item.name)}">${esc(item.name)}</button>
+        `).join('')}
+      </div>` : ''}
+    ${options.length ? `
+      <div class="category-option-grid">
+        ${options.map(option => `
+          <button class="category-option" type="button"
+            data-category-query="${esc(option)}">${esc(option)}</button>
+        `).join('')}
+      </div>` : ''}
+    ${config.query ? `<p class="helper-text">請在上方搜尋欄輸入完整路線，再按「搜尋」。</p>` : ''}
+  `;
+
+  if (config.query) {
+    $('searchInput').value = '';
+    $('searchInput').placeholder = config.title;
   }
 }
 
@@ -1031,20 +1119,39 @@ $('searchForm')?.addEventListener('submit', event => {
   doSearch();
 });
 
-document.querySelectorAll('[data-route-prefix]').forEach(button => {
+document.querySelectorAll('[data-route-prefix], [data-category]').forEach(button => {
   button.addEventListener('click', () => {
     const prefix = button.dataset.routePrefix;
+    const category = button.dataset.category;
     const input = $('searchInput');
     if (!input) return;
 
     document.querySelectorAll('.route-key').forEach(item => item.classList.remove('selected'));
     button.classList.add('selected');
-    input.value = prefix === '__numeric__' || prefix === '__other__' ? '' : prefix;
-    input.placeholder = prefix === '__numeric__' ? '輸入路線號碼，例如 265、306、947' :
-      prefix === '__other__' ? '輸入其他路線名稱或編號' : `輸入${prefix}字頭路線，例如 ${prefix}1、${prefix}7`;
+    if (category) {
+      renderCategoryOptions(category);
+      return;
+    }
+
+    $('categoryOptions').hidden = true;
+    input.value = prefix || '';
+    input.placeholder = `輸入${prefix}字頭路線，例如 ${prefix}1、${prefix}7`;
     input.focus();
-    if (prefix !== '__numeric__' && prefix !== '__other__') doSearch();
   });
+});
+
+document.addEventListener('click', event => {
+  const option = event.target.closest('[data-category-query]');
+  if (!option) return;
+
+  const query = option.dataset.categoryQuery;
+  const input = $('searchInput');
+  if (!input) return;
+
+  input.value = query;
+  input.placeholder = `已選分類：${query}；請按「搜尋」`;
+  input.focus();
+  $('categoryOptions').hidden = true;
 });
 
 /* ---------- 常用名稱編輯 ---------- */
