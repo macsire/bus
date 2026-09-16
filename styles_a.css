@@ -522,13 +522,35 @@ h2{
 .direction-main strong{display:block;color:#173f58;font-size:1rem}
 .direction-main small{display:block;margin-top:4px;color:#6b7f84;font-size:.78rem;white-space:normal}
 .direction-button{border:0;border-radius:10px;background:#e6f4f5;color:#17657a;padding:9px 10px;font-weight:800;white-space:nowrap}
+.direction-tabs{display:flex;gap:7px;overflow-x:auto;margin-top:14px;padding-bottom:2px}
+.direction-tab{flex:0 0 auto;border:2px solid #b8d2d5;border-radius:11px;background:#fff;color:#315f6d;padding:9px 12px;font-size:.82rem;font-weight:800;white-space:nowrap}
+.direction-tab.selected{border-color:#17657a;background:#e4f5f7;color:#145f6c}
 .timeline-heading{font-weight:800;color:#173f58;margin:16px 4px 8px}
-.route-timeline{position:relative;width:100%;padding-left:14px}
-.route-timeline::before{content:"";position:absolute;left:29px;top:10px;bottom:10px;width:3px;background:#b7d8dc;border-radius:3px}
-.timeline-stop{position:relative;display:grid;width:100%;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:10px;padding-left:8px;text-align:left;z-index:1}
-.timeline-node{flex:0 0 32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#e4f5f7;color:#17657a;font-weight:800;border:2px solid #fff;box-shadow:0 0 0 1px #a9ced3}
-.timeline-stop .list-main{flex:1;min-width:0}
-.timeline-stop .list-main strong{display:block;white-space:normal}
+.route-directions{display:grid;gap:18px;margin-top:16px}
+.route-direction-block{overflow:hidden;border:2px solid #b8d2d5;border-radius:16px;background:#fff}
+.route-direction-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 16px;background:#eaf6f7;border-bottom:2px solid #c5dfe1}
+.route-direction-kicker{display:block;color:#17657a;font-size:.72rem;font-weight:800}
+.route-direction-heading h3{margin:2px 0 3px;color:#173f58;font-size:1.15rem}
+.route-direction-heading small{display:block;color:#607780;font-size:.78rem}
+.live-badge{flex:0 0 auto;padding:6px 8px;border-radius:9px;background:#d5f0e7;color:#166d5f;font-size:.72rem;font-weight:800;white-space:nowrap}
+.route-stop-list{display:grid}
+.route-stop-row{display:grid;width:100%;grid-template-columns:35px minmax(0,1fr) minmax(0,auto) auto;align-items:center;gap:10px;padding:13px 14px;border:0;border-bottom:1px solid #d8e5e6;background:#fff;color:#173246;text-align:left;cursor:pointer}
+.route-stop-row:last-child{border-bottom:0}
+.route-stop-row:hover,.route-stop-row:focus-visible{background:#f1fafb}
+.stop-sequence{display:grid;place-items:center;width:29px;height:29px;border:1px solid #a9ced3;border-radius:50%;background:#eef8f8;color:#17657a;font-size:.8rem;font-weight:800}
+.route-stop-name{min-width:0;font-weight:800;line-height:1.35;overflow-wrap:anywhere}
+.route-stop-meta{color:#17657a;font-size:.74rem;white-space:nowrap}
+.route-live-note{margin:12px 4px 0;color:#6b7f84;font-size:.76rem;line-height:1.5}
+.stop-arrival-status{color:#b85d28;font-size:1rem;font-weight:800;text-align:right;white-space:nowrap}
+.action-sheet-backdrop{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;background:rgba(17,35,43,.52)}
+.action-sheet{position:relative;width:min(100%,620px);margin:0 auto;padding:27px 24px 34px;border-radius:28px 28px 0 0;background:#f7f9fc;box-shadow:0 -8px 28px rgba(23,63,88,.18)}
+.action-sheet h2{margin:4px 42px 2px 0;color:#173f58;font-size:1.45rem}
+.sheet-subtitle{margin:0 0 17px;color:#687d84}
+.sheet-close{position:absolute;top:17px;right:19px;border:0;background:transparent;color:#5d7780;font-size:2rem;line-height:1;cursor:pointer}
+.sheet-action{display:flex;align-items:center;gap:15px;width:100%;margin-top:10px;padding:15px 13px;border:1px solid #c1d9dd;border-radius:15px;background:#fff;color:#173f58;font-size:1rem;font-weight:800;text-align:left;cursor:pointer}
+.sheet-action:active{background:#e9f5f6}
+.sheet-action.sheet-primary{border-color:#17657a;background:#e5f5f6;color:#17657a}
+.sheet-icon{display:grid;place-items:center;width:28px;height:28px;color:#176e96;font-size:1.55rem;font-weight:400}
 .data-note{
   border-color:#e3c89f;
   background:#fff8eb;

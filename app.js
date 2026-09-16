@@ -46,7 +46,7 @@ const LOCAL_ROUTE_INDEX = [
 ];
 
 const CATEGORY_OPTIONS = {
-  幹線: { title: '幹線：請輸入路線名稱或編號', query: '幹線' },
+  幹線: { title: '幹線路線', query: '幹線', list: true },
   通勤: { title: '通勤路線', options: ['內科', '南軟'] },
   輕軌: { title: '輕軌接駁：請輸入路線名稱或編號', query: '輕軌' },
   先導: { title: '先導公車', local: LOCAL_ROUTE_INDEX.filter(item => item.category === '先導') },
@@ -62,7 +62,10 @@ const CATEGORY_OPTIONS = {
 function loadSettings() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    return { stops: Array.isArray(parsed.stops) ? parsed.stops : [] };
+    return {
+      stops: Array.isArray(parsed.stops) ? parsed.stops : [],
+      reminders: Array.isArray(parsed.reminders) ? parsed.reminders : []
+    };
   } catch {
     return { stops: [] };
   }
@@ -166,6 +169,11 @@ function etaStatus(row, minutes) {
   if (minutes === 0) return '即將到站';
   if (minutes != null) return `${minutes} 分`;
   return '即時資料暫時無法取得';
+}
+
+function vehicleLabel(row) {
+  const plate = row?.PlateNumb || row?.VehicleID || row?.BusID;
+  return plate ? String(plate) : '';
 }
 
 function haversine(a, b) {
@@ -350,6 +358,92 @@ function favoriteFromSelected() {
   saveSettings();
   renderStops();
   setStatus('success', '已加入常用', `已收藏「${stop.name}」。`);
+}
+
+/* ---------- 路線站牌操作選單 ---------- */
+
+function closeStopActionSheet() {
+  $('stopActionSheet')?.remove();
+}
+
+function openStopActionSheet(stop) {
+  closeStopActionSheet();
+  const sheet = document.createElement('div');
+  sheet.id = 'stopActionSheet';
+  sheet.className = 'action-sheet-backdrop';
+  sheet.innerHTML = `
+    <section class="action-sheet" role="dialog" aria-modal="true" aria-labelledby="stopActionTitle">
+      <button class="sheet-close" type="button" data-stop-sheet-close aria-label="關閉">×</button>
+      <p class="eyebrow">${esc(stop.route || '公車站牌')}</p>
+      <h2 id="stopActionTitle">${esc(stop.name)}</h2>
+      <p class="sheet-subtitle">${esc(stop.direction || cityLabel(stop.city))}</p>
+      <button class="sheet-action" type="button" data-stop-action="reminder">
+        <span class="sheet-icon">♧</span><span>設定到站提醒</span>
+      </button>
+      <button class="sheet-action" type="button" data-stop-action="group">
+        <span class="sheet-icon">＋</span><span>加入群組</span>
+      </button>
+      <button class="sheet-action sheet-primary" type="button" data-stop-action="arrival">
+        <span class="sheet-icon">↗</span><span>查看即時到站</span>
+      </button>
+    </section>`;
+  document.body.appendChild(sheet);
+  sheet.querySelector('[data-stop-sheet-close]')?.focus();
+
+  sheet.addEventListener('click', event => {
+    if (event.target === sheet || event.target.closest('[data-stop-sheet-close]')) {
+      closeStopActionSheet();
+      return;
+    }
+    const action = event.target.closest('[data-stop-action]')?.dataset.stopAction;
+    if (!action) return;
+
+    if (action === 'arrival') {
+      closeStopActionSheet();
+      showArrivals(stop);
+      return;
+    }
+
+    if (action === 'group') {
+      const group = prompt('請輸入群組名稱', '我的常用');
+      if (!group?.trim()) return;
+      const ids = stopIds(stop);
+      const exists = state.settings.stops.some(saved => {
+        const savedIds = Array.isArray(saved.ids)
+          ? saved.ids : [saved.stopUID || saved.id].filter(Boolean);
+        return saved.group === group.trim() && saved.city === stop.city &&
+          ids.some(id => savedIds.includes(id));
+      });
+      if (!exists) {
+        state.settings.stops.push({
+          id: uid('fav'), label: stop.name, name: stop.name,
+          group: group.trim(), city: stop.city || '', ids,
+          stopUID: ids[0] || '', lat: stop.lat ?? null, lon: stop.lon ?? null
+        });
+        saveSettings();
+        renderStops();
+      }
+      setStatus('success', '已加入群組', `「${stop.name}」已加入「${group.trim()}」。`);
+      closeStopActionSheet();
+      return;
+    }
+
+    if (action === 'reminder') {
+      const minutes = Number(prompt('提前幾分鐘提醒？', '5'));
+      if (!Number.isFinite(minutes) || minutes < 0) return;
+      const reminder = {
+        id: uid('reminder'), stopUID: stop.stopUID || stop.id,
+        name: stop.name, city: stop.city || '', route: stop.route || '',
+        minutes: Math.round(minutes), enabled: true
+      };
+      state.settings.reminders = (state.settings.reminders || [])
+        .filter(item => item.stopUID !== reminder.stopUID || item.route !== reminder.route);
+      state.settings.reminders.push(reminder);
+      saveSettings();
+      setStatus('success', '已設定提醒', `到站前 ${reminder.minutes} 分鐘提醒「${stop.name}」。`);
+      closeStopActionSheet();
+    }
+  });
 }
 
 /* ---------- 到站結果操作 ---------- */
@@ -722,7 +816,10 @@ async function searchRoutes(query, cities = ['Taipei', 'NewTaipei']) {
           kind: 'route',
           key: `${city}|route|${tdxName(route.RouteName)}`,
           name: tdxName(route.RouteName),
-          city
+          city,
+          routeUID: route.RouteUID || '',
+          routeID: route.RouteID || '',
+          subRoutes: route.SubRoutes || []
         }))
         .slice(0, 8);
     })
@@ -767,13 +864,17 @@ function renderSearchResults(items, query) {
 
   box.innerHTML = items.map(item => {
     if (item.kind === 'route') {
+      const ends = [...new Set((item.subRoutes || []).map(sub => {
+        const name = tdxName(sub.RouteName) || tdxName(sub.SubRouteName);
+        return name;
+      }).filter(Boolean))].slice(0, 2);
       return `
         <button class="list-row" data-route-result="${esc(item.key)}">
           <div class="list-main">
             <strong>${esc(item.name)}</strong>
-            <small>${esc(cityLabel(item.city))}｜公車路線</small>
+            <small>${esc(cityLabel(item.city))}｜${ends.length ? esc(ends.join(' ↔ ')) : '公車路線'}</small>
           </div>
-          <span class="text-button">查看路線</span>
+          <span class="text-button">查看到站</span>
         </button>`;
     }
 
@@ -826,8 +927,26 @@ function summarizeDirection(record) {
   };
 }
 
+async function getRouteEta(item) {
+  try {
+    const rows = await fetchJson(`/eta?city=${item.city}&route=${encodeURIComponent(item.name)}`);
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
+
+function directionRows(record, etaRows) {
+  const direction = Number(record.Direction);
+  return new Map(
+    etaRows
+      .filter(row => !Number.isFinite(direction) || !Number.isFinite(Number(row.Direction)) || Number(row.Direction) === direction)
+      .map(row => [row.StopUID, row])
+  );
+}
+
 async function renderRouteSummary(item) {
-  $('searchResults').innerHTML = `<div class="empty">正在讀取路線方向…</div>`;
+  $('searchResults').innerHTML = `<div class="empty">正在讀取路線、站牌與即時動態…</div>`;
 
   try {
     const records = await getRouteStopData(item.city, item.name);
@@ -855,75 +974,64 @@ async function renderRouteSummary(item) {
 
     item._records = unique;
 
-    $('searchResults').innerHTML = `
-      <section class="route-result-shell" aria-label="${esc(item.name)} 路線結果">
-        <div class="route-primary-card">
-          <div>
-            <span class="route-primary-label">公車路線</span>
-            <strong>${esc(item.name)}</strong>
-            <small>${esc(cityLabel(item.city))}｜${unique.length} 個行駛方向</small>
-          </div>
-          <button class="route-back-button" data-search-back="1">返回</button>
-        </div>
-        <div class="direction-section">
-          <div class="direction-section-heading">行駛方向</div>
-          <div class="direction-list">
-            ${unique.map((record, index) => `
-              <div class="direction-row">
-                <div class="direction-main">
-                  <strong>${record._summary.last ? `往 ${esc(record._summary.last)}` : '行駛方向'}</strong>
-                  <small>${esc(record._summary.first)} → ${esc(record._summary.last)}｜${record._summary.count} 站</small>
-                </div>
-                <button class="direction-button"
-                  data-route-expand="${index}"
-                  data-route-key="${esc(item.key)}">
-                  查看站牌
-                </button>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </section>
-    `;
+    const etaRows = await getRouteEta(item);
+    renderRouteDetail(item, etaRows);
   } catch (err) {
     $('searchResults').innerHTML =
       `<div class="empty">路線資料暫時無法取得：${esc(err.message)}</div>`;
   }
 }
 
-function renderRouteStops(item, index) {
-  const record = item._records?.[index];
-  if (!record) return;
-
-  const stops = record.Stops || [];
-
+function renderRouteDetail(item, etaRows) {
+  const records = item._records || [];
   $('searchResults').innerHTML = `
-    <div class="list-row route-header-row">
-      <div class="list-main">
-        <strong>
-          ${esc(item.name)}
-        </strong>
-        <small>${record._summary.last ? `往 ${esc(record._summary.last)}` : '行駛方向'}｜${stops.length} 站</small>
-      </div>
-      <button class="mini-button" data-route-summary="${esc(item.key)}">返回方向</button>
-    </div>
-
-    <div class="timeline-heading">沿途站名</div>
-    <div class="route-timeline">
-    ${stops.map((stop, stopIndex) => `
-      <button class="list-row timeline-stop"
-        data-route-stop="${esc(stop.StopUID || '')}"
-        data-route-stop-city="${esc(item.city)}"
-        data-route-stop-name="${esc(tdxName(stop.StopName))}"
-        data-route-name="${esc(item.name)}">
-        <span class="timeline-node" aria-hidden="true">${stopIndex + 1}</span>
-        <div class="list-main">
-          <strong>${esc(tdxName(stop.StopName))}</strong>
+    <section class="route-result-shell" aria-label="${esc(item.name)} 路線結果">
+      <div class="route-primary-card">
+        <div>
+          <span class="route-primary-label">公車路線</span>
+          <strong>${esc(item.name)}</strong>
+          <small>${esc(cityLabel(item.city))}｜${records.length} 個行駛方向</small>
         </div>
-        <span class="text-button">查到站</span>
-      </button>
-    `).join('')}
-    </div>
+        <button class="route-back-button" data-search-back="1">返回</button>
+      </div>
+      <div class="route-directions">
+        ${records.map((record, directionIndex) => {
+          const etaByStop = directionRows(record, etaRows);
+          const directionLabel = `往 ${record._summary.last || '行駛方向'}`;
+          return `
+          <section class="route-direction-block" aria-labelledby="route-direction-${directionIndex}">
+            <div class="route-direction-heading">
+              <div>
+                <span class="route-direction-kicker">行駛方向</span>
+                <h3 id="route-direction-${directionIndex}">${esc(directionLabel)}</h3>
+                <small>${esc(record._summary.first)} → ${esc(record._summary.last)}｜${record._summary.count} 站</small>
+              </div>
+              <span class="live-badge">即時動態</span>
+            </div>
+            <div class="route-stop-list">
+              ${(record.Stops || []).map((stop, stopIndex) => {
+                const eta = etaByStop.get(stop.StopUID);
+                const status = eta ? etaStatus(eta, etaMinutes(eta)) : '即時資料暫時無法取得';
+                const plate = eta ? vehicleLabel(eta) : '';
+                return `
+                <button class="route-stop-row" type="button"
+                  data-route-stop="${esc(stop.StopUID || '')}"
+                  data-route-stop-city="${esc(item.city)}"
+                  data-route-stop-name="${esc(tdxName(stop.StopName))}"
+                  data-route-name="${esc(item.name)}"
+                  data-route-direction="${esc(directionLabel)}">
+                  <span class="stop-sequence">${stopIndex + 1}</span>
+                  <span class="route-stop-name">${esc(tdxName(stop.StopName))}</span>
+                  <span class="route-stop-meta">${plate ? `車號 ${esc(plate)}` : ''}</span>
+                  <span class="stop-arrival-status">${esc(status)}</span>
+                </button>`;
+              }).join('')}
+            </div>
+          </section>`;
+        }).join('')}
+      </div>
+      <p class="route-live-note">資料會顯示官方目前回報的到站狀態；若沒有車號，代表目前沒有可對應的車輛回報。</p>
+    </section>
   `;
 }
 
@@ -974,6 +1082,32 @@ function renderCategoryOptions(category) {
       </div>` : ''}
     ${config.query ? `<p class="helper-text">請在上方搜尋欄輸入完整路線，再按「搜尋」。</p>` : ''}
   `;
+
+  if (config.query && config.list) {
+    box.innerHTML = `<strong class="category-options-title">${esc(config.title)}</strong><div class="empty">正在取得全部${esc(category)}路線…</div>`;
+    $('searchResults').hidden = false;
+    $('searchResults').innerHTML = '';
+    // 分類不是路線名稱搜尋：先取路線主檔，再依名稱／分類關鍵字篩選，
+    // 才能找到「內湖幹線」這類關鍵字不在開頭的路線。
+    Promise.allSettled([
+      getRouteList('Taipei'),
+      getRouteList('NewTaipei')
+    ]).then(results => {
+      const rows = results.flatMap((result, index) =>
+        result.status === 'fulfilled' && Array.isArray(result.value)
+          ? result.value.filter(route => normalize(tdxName(route.RouteName)).includes(normalize(category))).map(route => ({
+            kind: 'route', city: index === 0 ? 'Taipei' : 'NewTaipei',
+            key: `${index === 0 ? 'Taipei' : 'NewTaipei'}|route|${tdxName(route.RouteName)}`,
+            name: tdxName(route.RouteName),
+            routeUID: route.RouteUID || '', routeID: route.RouteID || '',
+            subRoutes: route.SubRoutes || []
+          })) : []
+      ).filter(item => item.name);
+      state.searchResults = [...new Map(rows.map(item => [item.key, item])).values()];
+      renderSearchResults(state.searchResults, category);
+    });
+    return;
+  }
 
   if (config.query) {
     $('searchInput').value = '';
@@ -1079,7 +1213,7 @@ document.addEventListener('click', event => {
   const expandEl = event.target.closest('[data-route-expand]');
   if (expandEl) {
     const item = state.searchResults.find(row => row.key === expandEl.dataset.routeKey);
-    if (item) renderRouteStops(item, Number(expandEl.dataset.routeExpand));
+    if (item) renderRouteSummary(item);
     return;
   }
 
@@ -1092,11 +1226,13 @@ document.addEventListener('click', event => {
 
   const routeStopEl = event.target.closest('[data-route-stop]');
   if (routeStopEl) {
-    showArrivals({
+    openStopActionSheet({
       id: routeStopEl.dataset.routeStop,
       stopUID: routeStopEl.dataset.routeStop,
       name: routeStopEl.dataset.routeStopName,
       city: routeStopEl.dataset.routeStopCity,
+      route: routeStopEl.dataset.routeName,
+      direction: routeStopEl.dataset.routeDirection,
       routes: [{ route: routeStopEl.dataset.routeName }]
     });
   }
