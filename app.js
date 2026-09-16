@@ -634,7 +634,7 @@ function renderNearbyGroupDetail(group) {
           <strong>${index + 1}. ${esc(stop.name)}</strong>
           <small>站牌｜${Math.round(stop.distance)} 公尺</small>
         </div>
-        <span class="text-button">查到站</span>
+        <span class="text-button">公車動態</span>
       </button>
     `).join('')}
   `;
@@ -800,17 +800,13 @@ function renderSearchResults(items, query) {
 
   box.innerHTML = items.map(item => {
     if (item.kind === 'route') {
-      const ends = [...new Set((item.subRoutes || []).map(sub => {
-        const name = tdxName(sub.RouteName) || tdxName(sub.SubRouteName);
-        return name;
-      }).filter(Boolean))].slice(0, 2);
       return `
         <button class="list-row" data-route-result="${esc(item.key)}">
           <div class="list-main">
             <strong>${esc(item.name)}</strong>
-            <small>${esc(cityLabel(item.city))}｜${ends.length ? esc(ends.join(' ↔ ')) : '公車路線'}</small>
+            <small>${esc(cityLabel(item.city))}｜公車路線</small>
           </div>
-          <span class="text-button">查看到站</span>
+          <span class="text-button">公車動態</span>
         </button>`;
     }
 
@@ -823,7 +819,7 @@ function renderSearchResults(items, query) {
             ${item.members.length > 1 ? `｜${item.members.length} 個候車點` : ''}
           </small>
         </div>
-        <span class="text-button">查看</span>
+        <span class="text-button">公車動態</span>
       </button>`;
   }).join('');
 }
@@ -846,7 +842,7 @@ function renderSearchStopGroup(group) {
           <strong>${index + 1}. ${esc(stop.name)}</strong>
           <small>站牌｜${esc(cityLabel(stop.city))}</small>
         </div>
-        <span class="text-button">查到站</span>
+        <span class="text-button">公車動態</span>
       </button>
     `).join('')}
   `;

@@ -200,7 +200,7 @@ h2{
 .route-category-row.row-four{grid-template-columns:repeat(4,minmax(0,1fr))}
 .route-category-row.row-one{grid-template-columns:1fr}
 .route-category-row.row-other-actions{grid-template-columns:minmax(0,1fr) 86px}
-.route-key.clear{color:#315f6d;background:#f7fbfc;border-color:#9bbfc7}
+.route-key.clear{color:#315f6d;background:#eaf2f3;border-color:#5d8b93;border-width:2.5px;font-weight:800}
 .category-options{
   margin-top:8px;
   padding:10px;
