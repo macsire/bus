@@ -387,6 +387,11 @@ h2{
 .list-main strong{display:block;font-size:1rem}
 .stop-name{font-weight:500}
 .stop-name.is-favorite{font-weight:800}
+.route-result-row{
+  border-color:#a9c7e6;
+  background:#eef4fc;
+}
+.route-result-row .list-main strong{color:#1d4f8f}
 .list-main small{
   display:block;
   margin-top:3px;
