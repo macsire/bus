@@ -1,9 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800&display=swap');
 
 :root{
+  /* 框架／選單文字色票 — 只規範整體框架與選單文字，
+     路線分類鍵盤、到站狀態色不受這組限制，維持原本各自的定義。 */
+  --color-primary:#0D3B66;        /* Deep Ocean Blue */
+  --color-primary-shadow:#082A46; /* 深一階，用於按鈕/卡片的立體按壓陰影 */
+  --color-menu-text:#2E6B3F;      /* Verdant Forest Green，選單文字／連結 */
+  --color-accent:#4F99D7;         /* Sky Blue，互動焦點提示 */
+  --color-text:#4D4D4D;           /* Granite Gray，內文文字 */
+  --color-surface:#FAF5EF;        /* Off-White，卡片／清單底色 */
+  --color-page-bg:#F2ECE4;        /* Off-White 更深一階，讓卡片能從頁面背景浮出來 */
+
   font-family:"Noto Sans TC",system-ui,-apple-system,sans-serif;
-  color:#173246;
-  background:#e3edf0;
+  color:var(--color-text);
+  background:var(--color-page-bg);
   font-synthesis:none;
 }
 *{box-sizing:border-box}
@@ -11,11 +21,19 @@ html{scroll-behavior:smooth}
 body{
   margin:0;
   min-width:320px;
-  background:#e3edf0;
+  background:var(--color-page-bg);
 }
 button,input{font:inherit}
 button{cursor:pointer}
 [hidden]{display:none!important}
+
+/* 框架層級的鍵盤可及性焦點樣式，呼應色票標註的「Accessibility First」 */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible{
+  outline:3px solid var(--color-accent);
+  outline-offset:2px;
+}
 
 .app-frame{
   width:min(calc(100% - 20px),430px);
@@ -29,7 +47,7 @@ button{cursor:pointer}
 }
 .brand-mark{
   margin:0 0 2px;
-  color:#0f7180;
+  color:var(--color-menu-text);
   font-size:.8rem;
   font-weight:800;
   letter-spacing:.16em;
@@ -46,10 +64,10 @@ button{cursor:pointer}
   font-size:.9rem;
 }
 .page-header{padding-bottom:14px}
-.back-link{display:inline-block;margin-bottom:12px;color:#145f6c;font-weight:800;text-decoration:none}
+.back-link{display:inline-block;margin-bottom:12px;color:var(--color-menu-text);font-weight:800;text-decoration:none}
 .page-panel{margin-bottom:14px}
 .page-panel .section-heading{margin-bottom:12px}
-footer a{color:#145f6c;text-decoration:none;font-weight:700}
+footer a{color:var(--color-menu-text);text-decoration:none;font-weight:700}
 
 .home-card,
 .content-panel,
@@ -57,7 +75,7 @@ footer a{color:#145f6c;text-decoration:none;font-weight:700}
 .data-note{
   border:2px solid #aacbd1;
   border-radius:22px;
-  background:#f9fcfd;
+  background:var(--color-surface);
 }
 .home-card{
   padding:17px;
@@ -66,7 +84,7 @@ footer a{color:#145f6c;text-decoration:none;font-weight:700}
 .home-heading{margin-bottom:13px}
 .eyebrow{
   margin:0 0 4px;
-  color:#0f7180;
+  color:var(--color-menu-text);
   font-size:.75rem;
   font-weight:800;
   letter-spacing:.08em;
@@ -83,7 +101,7 @@ h2{
   gap:11px;
 }
 .home-links{display:flex;gap:10px;margin-top:15px;padding-top:13px;border-top:1px solid #d5e3e5}
-.home-links a{flex:1;padding:11px 10px;border:2px solid #b8d2d5;border-radius:12px;background:#fff;color:#145f6c;text-align:center;font-weight:800;text-decoration:none}
+.home-links a{flex:1;padding:11px 10px;border:2px solid #b8d2d5;border-radius:12px;background:#fff;color:var(--color-menu-text);text-align:center;font-weight:800;text-decoration:none}
 .feature-button{
   display:flex;
   flex-direction:column;
@@ -284,7 +302,7 @@ h2{
 .text-button{
   padding:5px 0;
   border:0;
-  color:#0f7180;
+  color:var(--color-menu-text);
   background:transparent;
   font-weight:800;
 }
@@ -301,15 +319,15 @@ h2{
   font-weight:800;
 }
 .primary-button{
-  border:2px solid #173f58;
+  border:2px solid var(--color-primary);
   color:#fff;
-  background:#173f58;
-  box-shadow:0 3px 0 #0c2c3e;
+  background:var(--color-primary);
+  box-shadow:0 3px 0 var(--color-primary-shadow);
 }
 .secondary-button{
-  border:2px solid #0f7180;
-  color:#0b5d6a;
-  background:#effafa;
+  border:2px solid var(--color-menu-text);
+  color:var(--color-menu-text);
+  background:var(--color-surface);
 }
 .full-button{
   width:100%;
@@ -422,7 +440,7 @@ h2{
   padding:10px 12px;
   border:2px solid #b8d2d5;
   border-radius:12px;
-  color:#173246;
+  color:var(--color-text);
   background:#fff;
   font-size:1rem;
 }
@@ -509,11 +527,11 @@ h2{
   font-size:.72rem;
 }
 .route-result-shell{margin-top:8px;border:0;background:transparent}
-.route-primary-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 16px;border-radius:18px;background:#173f58;color:#fff;box-shadow:0 4px 0 #bfd3d7}
+.route-primary-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 16px;border-radius:18px;background:var(--color-primary);color:#fff;box-shadow:0 4px 0 #bfd3d7}
 .route-primary-card strong{display:block;font-size:1.55rem;line-height:1.15}
 .route-primary-card small{display:block;margin-top:6px;color:#d7e7eb;font-size:.8rem}
 .route-primary-label{display:block;margin-bottom:5px;color:#a9dbe0;font-size:.72rem;font-weight:700}
-.route-back-button{border:1px solid #b8dce1;border-radius:11px;background:#f7fcfd;color:#173f58;padding:8px 12px;font-weight:800;white-space:nowrap}
+.route-back-button{border:1px solid #b8dce1;border-radius:11px;background:#f7fcfd;color:var(--color-primary);padding:8px 12px;font-weight:800;white-space:nowrap}
 .direction-section{margin-top:15px;padding:0 4px}
 .direction-section-heading{margin:0 0 4px;color:#173f58;font-size:.9rem;font-weight:800}
 .direction-list{border-top:2px solid #b6d1d5}
