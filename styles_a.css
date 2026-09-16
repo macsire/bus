@@ -200,7 +200,7 @@ h2{
 .route-category-row.row-four{grid-template-columns:repeat(4,minmax(0,1fr))}
 .route-category-row.row-one{grid-template-columns:1fr}
 .route-category-row.row-other-actions{grid-template-columns:minmax(0,1fr) 86px}
-.route-key.clear{color:#315f6d;background:#eaf2f3;border-color:#5d8b93;border-width:2.5px;font-weight:800}
+.route-key.clear{color:#315f6d;background:#f7fbfc;border-color:#9bbfc7}
 .category-options{
   margin-top:8px;
   padding:10px;
@@ -385,6 +385,8 @@ h2{
 }
 .list-main{min-width:0;flex:1}
 .list-main strong{display:block;font-size:1rem}
+.stop-name{font-weight:500}
+.stop-name.is-favorite{font-weight:800}
 .list-main small{
   display:block;
   margin-top:3px;
@@ -504,7 +506,7 @@ h2{
 .arrival-row:last-child{border-bottom:0}
 .route-number{
   color:#173f58;
-  font-size:1.2rem;
+  font-size:1.45rem;
   font-weight:800;
 }
 .arrival-row strong{font-size:.97rem}
@@ -519,8 +521,14 @@ h2{
 }
 .arrival-time strong{
   display:block;
+  color:#70858b;
+  font-size:1.1rem;
+  font-weight:600;
+}
+.arrival-time strong.eta-soon{
   color:#b85d28;
   font-size:1.22rem;
+  font-weight:800;
 }
 .arrival-time small{
   color:#70858b;
@@ -556,10 +564,12 @@ h2{
 .route-stop-row:last-child{border-bottom:0}
 .route-stop-row:hover,.route-stop-row:focus-visible{background:#f1fafb}
 .stop-sequence{display:grid;place-items:center;width:29px;height:29px;border:1px solid #a9ced3;border-radius:50%;background:#eef8f8;color:#17657a;font-size:.8rem;font-weight:800}
-.route-stop-name{min-width:0;font-weight:800;line-height:1.35;overflow-wrap:anywhere}
+.route-stop-name{min-width:0;font-weight:500;line-height:1.35;overflow-wrap:anywhere}
+.route-stop-name.is-favorite{font-weight:800}
 .route-stop-meta{color:#17657a;font-size:.74rem;white-space:nowrap}
 .route-live-note{margin:12px 4px 0;color:#6b7f84;font-size:.76rem;line-height:1.5}
-.stop-arrival-status{color:#b85d28;font-size:1rem;font-weight:800;text-align:right;white-space:nowrap}
+.stop-arrival-status{color:#70858b;font-size:1rem;font-weight:600;text-align:right;white-space:nowrap}
+.stop-arrival-status.eta-soon{color:#b85d28;font-weight:800}
 .action-sheet-backdrop{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;background:rgba(17,35,43,.52)}
 .action-sheet{position:relative;width:min(100%,620px);margin:0 auto;padding:27px 24px 34px;border-radius:28px 28px 0 0;background:#f7f9fc;box-shadow:0 -8px 28px rgba(23,63,88,.18)}
 .action-sheet h2{margin:4px 42px 2px 0;color:#173f58;font-size:1.45rem}

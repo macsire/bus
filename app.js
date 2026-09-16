@@ -170,6 +170,14 @@ function etaStatus(row, minutes) {
   return '即時資料暫時無法取得';
 }
 
+// 只有真的快到站（3 分鐘內、且不是尚未發車／末班已過這種狀態文字）才加粗，
+// 其餘一律用一般字重，避免整排到站時間都用粗體、反而看不出誰真的快到了。
+function isEtaSoon(row, minutes) {
+  const stopStatus = Number(row.StopStatus);
+  if (stopStatus === 1 || stopStatus === 3) return false;
+  return minutes != null && minutes <= 3;
+}
+
 function vehicleLabel(row) {
   const plate = row?.PlateNumb || row?.VehicleID || row?.BusID;
   return plate ? String(plate) : '';
@@ -190,6 +198,23 @@ function stopIds(stop) {
   if (stop?.stopUID) return [stop.stopUID];
   if (stop?.id && !String(stop.id).startsWith('fav-')) return [stop.id];
   return [];
+}
+
+// 站牌清單（附近站牌／搜尋結果）裡的站名不需要每一筆都加粗，
+// 只有使用者已經收藏在「我的常用」裡的站牌，才用加粗字重凸顯出來。
+function isFavoriteStop(stop) {
+  const ids = stopIds(stop);
+  if (!ids.length) return false;
+  return state.settings.stops.some(saved => {
+    const savedIds = Array.isArray(saved.ids)
+      ? saved.ids
+      : [saved.stopUID || saved.id].filter(Boolean);
+    return saved.city === stop.city && ids.some(id => savedIds.includes(id));
+  });
+}
+
+function isFavoriteGroup(group) {
+  return (group.members || []).some(isFavoriteStop);
 }
 
 async function loadCityStops(city) {
@@ -491,6 +516,7 @@ async function renderLiveArrivals(rows, stop) {
     $('arrivalList').innerHTML = sorted.map(row => {
       const min = etaMinutes(row);
       const status = etaStatus(row, min);
+      const soon = isEtaSoon(row, min);
 
       return `
       <article class="arrival-row">
@@ -500,7 +526,7 @@ async function renderLiveArrivals(rows, stop) {
             <div class="route-destination">${esc(stop.name)}｜官方即時資料</div>
           </div>
           <div class="arrival-time">
-            <strong>${esc(status)}</strong>
+            <strong class="${soon ? 'eta-soon' : ''}">${esc(status)}</strong>
             <small>預估到站</small>
           </div>
         </article>`;
@@ -603,7 +629,7 @@ function renderNearbyGroups(groups) {
   $('nearbyList').innerHTML = groups.map(group => `
     <button class="list-row" data-nearby-group="${esc(group.key)}">
       <div class="list-main">
-        <strong>${esc(group.name)}</strong>
+        <strong class="stop-name ${isFavoriteGroup(group) ? 'is-favorite' : ''}">${esc(group.name)}</strong>
         <small>
           最近 ${Math.round(group.distance)} 公尺
           ${group.members.length > 1 ? `｜${group.members.length} 個候車點` : ''}
@@ -631,7 +657,7 @@ function renderNearbyGroupDetail(group) {
         data-nearby-stop="${esc(stop.id)}"
         data-nearby-city="${esc(stop.city)}">
         <div class="list-main">
-          <strong>${index + 1}. ${esc(stop.name)}</strong>
+          <strong class="stop-name ${isFavoriteStop(stop) ? 'is-favorite' : ''}">${index + 1}. ${esc(stop.name)}</strong>
           <small>站牌｜${Math.round(stop.distance)} 公尺</small>
         </div>
         <span class="text-button">公車動態</span>
@@ -813,7 +839,7 @@ function renderSearchResults(items, query) {
     return `
       <button class="list-row" data-stop-group-result="${esc(item.key)}">
         <div class="list-main">
-          <strong>${esc(item.name)}</strong>
+          <strong class="stop-name ${isFavoriteGroup(item) ? 'is-favorite' : ''}">${esc(item.name)}</strong>
           <small>
             ${esc(cityLabel(item.city))}
             ${item.members.length > 1 ? `｜${item.members.length} 個候車點` : ''}
@@ -839,7 +865,7 @@ function renderSearchStopGroup(group) {
         data-search-stop="${esc(stop.id)}"
         data-search-city="${esc(stop.city)}">
         <div class="list-main">
-          <strong>${index + 1}. ${esc(stop.name)}</strong>
+          <strong class="stop-name ${isFavoriteStop(stop) ? 'is-favorite' : ''}">${index + 1}. ${esc(stop.name)}</strong>
           <small>站牌｜${esc(cityLabel(stop.city))}</small>
         </div>
         <span class="text-button">公車動態</span>
@@ -865,6 +891,12 @@ function liveStopStatusText(stop) {
 function liveStopPlateLabel(stop) {
   const plates = [...new Set((stop.buses || []).map(bus => bus.plate).filter(Boolean))];
   return plates.join('、');
+}
+
+function isLiveStopSoon(stop) {
+  const status = Number(stop.stopStatus);
+  if (status === 1 || status === 3) return false;
+  return stop.eta != null && stop.eta <= 3;
 }
 
 async function renderRouteSummary(item) {
@@ -938,6 +970,8 @@ function renderRouteDetail(item) {
           ${stops.map(stop => {
             const status = liveStopStatusText(stop);
             const plate = liveStopPlateLabel(stop);
+            const soon = isLiveStopSoon(stop);
+            const favorite = isFavoriteStop({ stopUID: stop.stopUID, city: item.city });
             return `
               <button class="route-stop-row" type="button"
                 data-route-stop="${esc(stop.stopUID || '')}"
@@ -946,9 +980,9 @@ function renderRouteDetail(item) {
                 data-route-name="${esc(item.name)}"
                 data-route-direction="${esc(directionLabel)}">
                 <span class="stop-sequence">${stop.sequence}</span>
-                <span class="route-stop-name">${esc(stop.stopName)}</span>
+                <span class="route-stop-name ${favorite ? 'is-favorite' : ''}">${esc(stop.stopName)}</span>
                 <span class="route-stop-meta">${plate ? `車號 ${esc(plate)}` : ''}</span>
-                <span class="stop-arrival-status">${esc(status)}</span>
+                <span class="stop-arrival-status ${soon ? 'eta-soon' : ''}">${esc(status)}</span>
               </button>`;
           }).join('')}
         </div>
