@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#173f58" />
+<title>我的常用｜MyBUS</title>
+<link rel="stylesheet" href="./styles_a.css" />
+</head>
+<body data-page="favorites">
+<main class="app-frame">
+<header class="brand-header page-header">
+  <a class="back-link" href="./index.html">‹ 回到找公車</a>
+  <p class="eyebrow">MyBUS</p>
+  <h1>我的常用</h1>
+  <p class="brand-subtitle">快速查詢常搭的站牌</p>
+</header>
+
+<section id="stopsPanel" class="content-panel page-panel" aria-labelledby="stopsTitle">
+  <div class="section-heading"><div><p class="eyebrow">我的常用</p><h2 id="stopsTitle">常搭的站牌</h2></div></div>
+  <div id="stopList" class="stack-list"></div>
+  <button id="addStopBtn" class="secondary-button full-button" type="button">＋ 從查詢結果加入常用</button>
+  <div class="backup-box"><strong>備份本機設定</strong><p>常用站牌只存在這支裝置，可備份成 JSON 檔。</p><div class="button-row"><button id="backupBtn" class="secondary-button" type="button">備份設定</button><button id="restoreBtn" class="secondary-button" type="button">匯入設定</button><input id="restoreInput" type="file" accept="application/json,.json" hidden /></div></div>
+</section>
+
+<section id="editorPanel" class="content-panel page-panel" hidden aria-labelledby="editorTitle">
+  <div class="section-heading"><div><p class="eyebrow">編輯</p><h2 id="editorTitle">編輯常用名稱</h2></div><button id="closeEditorBtn" class="text-button" type="button">關閉</button></div>
+  <form id="editorForm" class="form-grid"><input id="editId" type="hidden" /><label for="labelInput">常用名稱</label><input id="labelInput" required placeholder="例如：家附近" /><label for="nameInput">站牌名稱</label><input id="nameInput" readonly /><div id="routeEditor" hidden><div id="routeFields"></div><button id="addRouteBtn" type="button">新增路線</button></div><div class="form-actions"><button class="primary-button" type="submit">儲存設定</button><button id="cancelEditorBtn" class="secondary-button" type="button">取消</button></div></form>
+</section>
+
+<section id="resultPanel" class="result-panel" aria-labelledby="resultTitle">
+  <div class="section-heading"><div><p class="eyebrow">即時到站</p><h2 id="resultTitle">到站查詢</h2></div><span id="resultTag" class="tag">尚未選擇</span></div>
+  <div id="arrivalList" class="arrival-list"><div class="empty">選擇常用站牌後，這裡會顯示即時到站資訊。</div></div>
+</section>
+
+<section class="data-note"><strong>v0.50a</strong><p>常用站牌設定只儲存在本機裝置；即時資料來自大臺北公車官方資料服務。</p></section>
+<footer><a href="./index.html">MyBUS 找公車</a><a href="./nearby.html">附近站牌</a></footer>
+</main>
+<script src="./app.js" defer></script>
+</body>
+</html>

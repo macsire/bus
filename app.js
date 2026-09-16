@@ -314,6 +314,9 @@ function openEditor(item) {
 
 function closeEditor() {
   if ($('editorPanel')) $('editorPanel').hidden = true;
+  if (document.body.dataset.page === 'favorites' && $('stopsPanel')) {
+    $('stopsPanel').hidden = false;
+  }
 }
 
 function favoriteFromSelected() {
@@ -598,8 +601,8 @@ function renderNearbyGroupDetail(group) {
         data-nearby-stop="${esc(stop.id)}"
         data-nearby-city="${esc(stop.city)}">
         <div class="list-main">
-          <strong>${members.length > 1 ? `候車點 ${index + 1}` : esc(stop.name)}</strong>
-          <small>${Math.round(stop.distance)} 公尺</small>
+          <strong>${index + 1}. ${esc(stop.name)}</strong>
+          <small>站牌｜${Math.round(stop.distance)} 公尺</small>
         </div>
         <span class="text-button">查到站</span>
       </button>
@@ -853,30 +856,34 @@ async function renderRouteSummary(item) {
     item._records = unique;
 
     $('searchResults').innerHTML = `
-      <div class="list-row">
-        <div class="list-main">
-          <strong>${esc(item.name)}</strong>
-          <small>${esc(cityLabel(item.city))}｜${unique.length} 個方向</small>
-        </div>
-        <button class="mini-button" data-search-back="1">返回</button>
-      </div>
-
-      ${unique.map((record, index) => `
-        <div class="list-row">
-          <div class="list-main">
-            <strong>${record._summary.last ? `往 ${esc(record._summary.last)}` : '行駛方向'}</strong>
-            <small>
-              ${esc(record._summary.first)} → ${esc(record._summary.last)}
-              ｜${record._summary.count} 站
-            </small>
+      <section class="route-result-shell" aria-label="${esc(item.name)} 路線結果">
+        <div class="route-primary-card">
+          <div>
+            <span class="route-primary-label">公車路線</span>
+            <strong>${esc(item.name)}</strong>
+            <small>${esc(cityLabel(item.city))}｜${unique.length} 個行駛方向</small>
           </div>
-          <button class="mini-button"
-            data-route-expand="${index}"
-            data-route-key="${esc(item.key)}">
-            沿線站牌
-          </button>
+          <button class="route-back-button" data-search-back="1">返回</button>
         </div>
-      `).join('')}
+        <div class="direction-section">
+          <div class="direction-section-heading">行駛方向</div>
+          <div class="direction-list">
+            ${unique.map((record, index) => `
+              <div class="direction-row">
+                <div class="direction-main">
+                  <strong>${record._summary.last ? `往 ${esc(record._summary.last)}` : '行駛方向'}</strong>
+                  <small>${esc(record._summary.first)} → ${esc(record._summary.last)}｜${record._summary.count} 站</small>
+                </div>
+                <button class="direction-button"
+                  data-route-expand="${index}"
+                  data-route-key="${esc(item.key)}">
+                  查看站牌
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </section>
     `;
   } catch (err) {
     $('searchResults').innerHTML =
