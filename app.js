@@ -955,26 +955,34 @@ async function renderRouteSummary(item) {
 
     if (!usable.length) throw new Error('找不到路線站序');
 
-    const seen = new Set();
-    const unique = [];
-
+    // 同一條路線可能因 SubRouteUID 或業者資料版本而回傳多筆相同方向。
+    // 路線頁先收斂成「去程／返程」兩個選擇；若同方向有多筆，採站序較完整者。
+    const byDirection = new Map();
     for (const record of usable) {
-      const s = summarizeDirection(record);
-      // 同一個 SubRouteUID 可能包含往返兩個 Direction（例如藍22），
-      // F 路線也可能缺少 Direction，因此兩者都要納入識別。
-      const key = record.SubRouteUID
-        ? `${record.SubRouteUID}|${record.Direction ?? ''}`
-        : record.RouteUID
-          ? `${record.RouteUID}|${record.Direction ?? ''}|${s.first}|${s.last}`
-          : `${record.Direction ?? ''}|${s.first}|${s.last}|${s.count}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      unique.push({ ...record, _summary: s });
+      const summary = summarizeDirection(record);
+      const direction = Number.isFinite(Number(record.Direction))
+        ? Number(record.Direction)
+        : byDirection.size;
+      const current = byDirection.get(direction);
+      if (!current || summary.count > current._summary.count) {
+        byDirection.set(direction, {
+          ...record,
+          _summary: summary,
+          _directionValue: direction
+        });
+      }
     }
 
-    item._records = unique;
+    item._records = [...byDirection.values()]
+      .sort((a, b) => a._directionValue - b._directionValue)
+      .map((record, index) => ({
+        ...record,
+        _directionIndex: index,
+        _directionLabel: index === 0 ? '去程' : index === 1 ? '返程' : `支線 ${index + 1}`
+      }));
 
     const etaRows = await getRouteEta(item);
+    item._etaRows = etaRows;
     renderRouteDetail(item, etaRows);
   } catch (err) {
     $('searchResults').innerHTML =
@@ -984,52 +992,70 @@ async function renderRouteSummary(item) {
 
 function renderRouteDetail(item, etaRows) {
   const records = item._records || [];
+  const selectedIndex = Math.min(
+    Number.isInteger(item._selectedDirection) ? item._selectedDirection : 0,
+    Math.max(records.length - 1, 0)
+  );
+  item._selectedDirection = selectedIndex;
+  const selected = records[selectedIndex];
+
+  if (!selected) {
+    $('searchResults').innerHTML = '<div class="empty">找不到可顯示的行駛方向。</div>';
+    return;
+  }
+
+  const etaByStop = directionRows(selected, etaRows);
+  const directionLabel = `往 ${selected._summary.last || '行駛方向'}`;
+
   $('searchResults').innerHTML = `
-    <section class="route-result-shell" aria-label="${esc(item.name)} 路線結果">
+    <section class="route-result-shell" data-route-detail-key="${esc(item.key)}" aria-label="${esc(item.name)} 路線結果">
       <div class="route-primary-card">
         <div>
           <span class="route-primary-label">公車路線</span>
           <strong>${esc(item.name)}</strong>
-          <small>${esc(cityLabel(item.city))}｜${records.length} 個行駛方向</small>
+          <small>${esc(cityLabel(item.city))}｜選擇行駛方向後查看站牌</small>
         </div>
         <button class="route-back-button" data-search-back="1">返回</button>
       </div>
-      <div class="route-directions">
-        ${records.map((record, directionIndex) => {
-          const etaByStop = directionRows(record, etaRows);
-          const directionLabel = `往 ${record._summary.last || '行駛方向'}`;
-          return `
-          <section class="route-direction-block" aria-labelledby="route-direction-${directionIndex}">
-            <div class="route-direction-heading">
-              <div>
-                <span class="route-direction-kicker">行駛方向</span>
-                <h3 id="route-direction-${directionIndex}">${esc(directionLabel)}</h3>
-                <small>${esc(record._summary.first)} → ${esc(record._summary.last)}｜${record._summary.count} 站</small>
-              </div>
-              <span class="live-badge">即時動態</span>
-            </div>
-            <div class="route-stop-list">
-              ${(record.Stops || []).map((stop, stopIndex) => {
-                const eta = etaByStop.get(stop.StopUID);
-                const status = eta ? etaStatus(eta, etaMinutes(eta)) : '即時資料暫時無法取得';
-                const plate = eta ? vehicleLabel(eta) : '';
-                return `
-                <button class="route-stop-row" type="button"
-                  data-route-stop="${esc(stop.StopUID || '')}"
-                  data-route-stop-city="${esc(item.city)}"
-                  data-route-stop-name="${esc(tdxName(stop.StopName))}"
-                  data-route-name="${esc(item.name)}"
-                  data-route-direction="${esc(directionLabel)}">
-                  <span class="stop-sequence">${stopIndex + 1}</span>
-                  <span class="route-stop-name">${esc(tdxName(stop.StopName))}</span>
-                  <span class="route-stop-meta">${plate ? `車號 ${esc(plate)}` : ''}</span>
-                  <span class="stop-arrival-status">${esc(status)}</span>
-                </button>`;
-              }).join('')}
-            </div>
-          </section>`;
-        }).join('')}
+      <div class="direction-tabs" role="tablist" aria-label="選擇行駛方向">
+        ${records.map((record, index) => `
+          <button class="direction-tab ${index === selectedIndex ? 'selected' : ''}"
+            type="button" role="tab"
+            aria-selected="${index === selectedIndex}"
+            data-route-direction-index="${index}">
+            ${esc(record._directionLabel)}
+          </button>
+        `).join('')}
       </div>
+      <section class="route-direction-block" aria-labelledby="route-selected-direction">
+        <div class="route-direction-heading">
+          <div>
+            <span class="route-direction-kicker">${esc(selected._directionLabel)}</span>
+            <h3 id="route-selected-direction">${esc(directionLabel)}</h3>
+            <small>${esc(selected._summary.first)} → ${esc(selected._summary.last)}｜${selected._summary.count} 站</small>
+          </div>
+          <span class="live-badge">即時動態</span>
+        </div>
+        <div class="route-stop-list">
+          ${(selected.Stops || []).map((stop, stopIndex) => {
+            const eta = etaByStop.get(stop.StopUID);
+            const status = eta ? etaStatus(eta, etaMinutes(eta)) : '即時資料暫時無法取得';
+            const plate = eta ? vehicleLabel(eta) : '';
+            return `
+              <button class="route-stop-row" type="button"
+                data-route-stop="${esc(stop.StopUID || '')}"
+                data-route-stop-city="${esc(item.city)}"
+                data-route-stop-name="${esc(tdxName(stop.StopName))}"
+                data-route-name="${esc(item.name)}"
+                data-route-direction="${esc(directionLabel)}">
+                <span class="stop-sequence">${stopIndex + 1}</span>
+                <span class="route-stop-name">${esc(tdxName(stop.StopName))}</span>
+                <span class="route-stop-meta">${plate ? `車號 ${esc(plate)}` : ''}</span>
+                <span class="stop-arrival-status">${esc(status)}</span>
+              </button>`;
+          }).join('')}
+        </div>
+      </section>
       <p class="route-live-note">資料會顯示官方目前回報的到站狀態；若沒有車號，代表目前沒有可對應的車輛回報。</p>
     </section>
   `;
@@ -1194,6 +1220,18 @@ document.addEventListener('click', event => {
 
   if (event.target.closest('[data-search-back]')) {
     renderSearchResults(state.searchResults, $('searchInput').value.trim());
+    return;
+  }
+
+  const directionEl = event.target.closest('[data-route-direction-index]');
+  if (directionEl) {
+    const routeShell = event.target.closest('.route-result-shell');
+    const routeKey = routeShell?.dataset.routeDetailKey;
+    const item = state.searchResults.find(row => row.key === routeKey);
+    if (item) {
+      item._selectedDirection = Number(directionEl.dataset.routeDirectionIndex) || 0;
+      renderRouteDetail(item, item._etaRows || []);
+    }
     return;
   }
 
