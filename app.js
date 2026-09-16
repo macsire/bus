@@ -827,7 +827,7 @@ function renderSearchResults(items, query) {
   box.innerHTML = items.map(item => {
     if (item.kind === 'route') {
       return `
-        <button class="list-row" data-route-result="${esc(item.key)}">
+        <button class="list-row route-result-row" data-route-result="${esc(item.key)}">
           <div class="list-main">
             <strong>${esc(item.name)}</strong>
             <small>${esc(cityLabel(item.city))}｜公車路線</small>
@@ -889,6 +889,11 @@ function liveStopStatusText(stop) {
 }
 
 function liveStopPlateLabel(stop) {
+  // 跟官方介面（ebus.gov.taipei）呈現方式一致：車號只在「即將到站」
+  // 那一刻才顯示，其餘距離只顯示倒數分鐘數字，不特別秀車號；
+  // 尚未發車／末班已過的狀態也不顯示車號，避免自相矛盾。「離站」
+  // 事件不特別呈現，直接反映在下一站的倒數分鐘更新即可。
+  if (stop.eta !== 0) return '';
   const plates = [...new Set((stop.buses || []).map(bus => bus.plate).filter(Boolean))];
   return plates.join('、');
 }
@@ -972,6 +977,7 @@ function renderRouteDetail(item) {
             const plate = liveStopPlateLabel(stop);
             const soon = isLiveStopSoon(stop);
             const favorite = isFavoriteStop({ stopUID: stop.stopUID, city: item.city });
+
             return `
               <button class="route-stop-row" type="button"
                 data-route-stop="${esc(stop.stopUID || '')}"
