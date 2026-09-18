@@ -491,17 +491,15 @@ async function renderLiveArrivals(rows, stop) {
       const min = etaMinutes(row);
       const status = etaStatus(row, min);
       const soon = isEtaSoon(row, min);
+      const plate = vehicleLabel(row);
 
       return `
       <article class="arrival-row">
-          <div class="route-number">${esc(routeName(row))}</div>
+          <div class="arrival-badge ${soon ? 'eta-soon' : ''}">${esc(status)}</div>
           <div>
+            <div class="route-number">${esc(routeName(row))}</div>
             <strong>${esc(destinationFromRow(row))}</strong>
-            <div class="route-destination">${esc(stop.name)}｜官方即時資料</div>
-          </div>
-          <div class="arrival-time">
-            <strong class="${soon ? 'eta-soon' : ''}">${esc(status)}</strong>
-            <small>預估到站</small>
+            <div class="route-destination">${esc(stop.name)}｜官方即時資料${plate ? `<span class="vehicle-plate">${esc(plate)}</span>` : ''}</div>
           </div>
         </article>`;
     }).join('');
@@ -801,7 +799,7 @@ function renderSearchResults(items, query) {
         <button class="list-row route-result-row" data-route-result="${esc(item.key)}">
           <div class="list-main">
             <strong>${esc(item.name)}</strong>
-            <small>${esc(cityLabel(item.city))}｜公車路線</small>
+            <small>${esc(cityLabel(item.city))}｜公車路線${item.categoryLabel ? ` <span class="category-tag">${esc(item.categoryLabel)}</span>` : ''}</small>
           </div>
           <span class="text-button">公車動態</span>
         </button>`;
@@ -994,16 +992,39 @@ async function doSearch() {
   }
 }
 
+// 每個分類的「一眼看得出關聯」關鍵字：符合的排前面，其餘（像純數字
+// 這種看不出關聯、但官方確實歸在這個分類的路線）排後面。這只影響
+// 排序，不影響哪些路線會被列出來。
+const CATEGORY_NAME_HINT = {
+  '幹線專車': name => name.includes('幹線'),
+  '捷運先導公車': name => name.includes('先導'),
+  '內科專車': name => name.includes('內科'),
+  '南軟專車': name => name.includes('南軟'),
+  '跳蛙': name => name.includes('跳蛙'),
+  'F新巴士': name => name.startsWith('F')
+};
+
 async function fetchCategoryRoutes(category) {
   const data = await fetchJson(`/route-category?category=${encodeURIComponent(category)}`);
   const routes = Array.isArray(data?.routes) ? data.routes : [];
-  return routes.map(route => ({
+  const items = routes.map(route => ({
     kind: 'route',
     city: route.city,
     key: `${route.city}|route|${route.name}`,
     name: route.name,
+    categoryLabel: category,
     routeUID: '', routeID: '', subRoutes: []
   }));
+
+  const isNamed = CATEGORY_NAME_HINT[category];
+  if (isNamed) {
+    // 穩定排序：符合關鍵字的維持原順序排前面，其餘維持原順序排後面。
+    return [
+      ...items.filter(item => isNamed(item.name)),
+      ...items.filter(item => !isNamed(item.name))
+    ];
+  }
+  return items;
 }
 
 async function showCategoryList(category, label) {
