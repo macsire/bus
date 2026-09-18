@@ -16,13 +16,13 @@
 <p class="brand-subtitle">查詢公車到站時間</p>
 </header>
 
-<section class="home-card" aria-labelledby="homeTitle">
+<section class="home-card search-card" aria-labelledby="homeTitle">
 <div class="home-heading">
 <p class="eyebrow">今天要去哪裡？</p>
 <h2 id="homeTitle">公車即時動態</h2>
 </div>
 
-<form id="searchForm" class="form-grid" style="margin-bottom:12px;" autocomplete="off">
+<form id="searchForm" class="form-grid" autocomplete="off">
 <label for="searchInput" class="sr-only">搜尋站牌或路線名稱</label>
 <input id="searchInput" type="search" placeholder="輸入站牌名稱或路線，例如 南京復興、306" />
 <div class="search-action-row">
@@ -30,7 +30,10 @@
 <button id="clearRouteFilterBtn" class="secondary-button" type="button">清除</button>
 </div>
 </form>
-<div class="route-keyboard" aria-label="公車路線分類快速輸入">
+</section>
+
+<section class="home-card category-card" aria-label="公車路線分類快速輸入">
+<div class="route-keyboard">
 <div class="keyboard-heading"><strong>路線分類快速輸入</strong><span>點選後可再補路線號碼</span></div>
 <div id="routeCategoryGrid" class="route-category-grid">
 <div class="route-category-row row-five">
@@ -58,8 +61,9 @@
 </div>
 <div id="categoryOptions" class="category-options" hidden></div>
 </div>
-<div id="searchResults" class="stack-list" hidden></div>
 </section>
+
+<div id="searchResults" class="stack-list" hidden></div>
 
 <nav class="quick-links-card" aria-label="其他公車功能">
 <a href="./nearby.html">附近站牌</a>

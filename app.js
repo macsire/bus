@@ -30,7 +30,7 @@ const CATEGORY_OPTIONS = {
   市民小巴: { title: '市民小巴：請輸入路線名稱或編號', mode: 'query', query: '市民小巴' },
   新巴士F: { title: 'F 新巴士', mode: 'list', category: 'F新巴士' },
   跳蛙: { title: '跳蛙公車', mode: 'list', category: '跳蛙' },
-  其他: { title: '其他特殊路線', mode: 'list', category: '其他' }
+  其他: { title: '其他特殊路線（觀光、花季、懷恩⋯）', mode: 'combined-list', categories: ['其他', '觀光巴士', '活動專車'] }
 };
 
 function loadSettings() {
