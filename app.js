@@ -23,15 +23,8 @@ const $ = id => document.getElementById(id);
 // 「填入搜尋關鍵字」提示做法，不是真正的分類清單。
 const CATEGORY_OPTIONS = {
   幹線: { title: '幹線專車', mode: 'list', category: '幹線專車' },
-  通勤: {
-    title: '通勤專車',
-    mode: 'submenu',
-    options: [
-      { label: '內科專車', category: '內科專車' },
-      { label: '南軟專車', category: '南軟專車' }
-    ]
-  },
-  輕軌: { title: '輕軌接駁：請輸入路線名稱或編號', mode: 'query', query: '輕軌' },
+  通勤: { title: '通勤專車', mode: 'combined-list', categories: ['內科專車', '南軟專車'] },
+  輕軌: { title: '輕軌接駁公車', mode: 'list', category: '輕軌接駁公車' },
   先導: { title: '捷運先導公車', mode: 'list', category: '捷運先導公車' },
   小: { title: '小型公車：請輸入路線名稱或編號', mode: 'query', query: '小' },
   市民小巴: { title: '市民小巴：請輸入路線名稱或編號', mode: 'query', query: '市民小巴' },
@@ -1041,6 +1034,21 @@ async function showCategoryList(category, label) {
   }
 }
 
+async function showCombinedCategoryList(categories, label) {
+  $('categoryOptions').hidden = true;
+  $('categoryOptions').innerHTML = '';
+  $('searchResults').hidden = false;
+  $('searchResults').innerHTML = `<div class="empty">正在取得${esc(label)}路線…</div>`;
+
+  try {
+    const groups = await Promise.all(categories.map(fetchCategoryRoutes));
+    state.searchResults = groups.flat();
+    renderSearchResults(state.searchResults, label);
+  } catch (err) {
+    $('searchResults').innerHTML = `<div class="empty">分類資料暫時無法取得：${esc(err.message)}</div>`;
+  }
+}
+
 function renderCategoryOptions(categoryKey) {
   const box = $('categoryOptions');
   const config = CATEGORY_OPTIONS[categoryKey];
@@ -1055,6 +1063,11 @@ function renderCategoryOptions(categoryKey) {
 
   if (config.mode === 'list') {
     showCategoryList(config.category, config.title);
+    return;
+  }
+
+  if (config.mode === 'combined-list') {
+    showCombinedCategoryList(config.categories, config.title);
     return;
   }
 
