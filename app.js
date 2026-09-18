@@ -16,47 +16,28 @@ const routeStopCache = new Map();
 const $ = id => document.getElementById(id);
 
 // 本地只保存分類與非數字路線的搜尋別名；站序與即時到站仍由 API 取得。
-const LOCAL_ROUTE_INDEX = [
-  {
-    name: '景美-榮總(快)',
-    city: 'Taipei',
-    category: '快速',
-    aliases: ['景美-榮總', '景美—榮總', '景美榮總']
-  },
-  {
-    name: '629汐東捷運先導公車',
-    query: '629',
-    city: 'NewTaipei',
-    category: '先導',
-    aliases: ['629先導公車', '汐東捷運先導公車']
-  },
-  {
-    name: '985萬大樹林先導公車',
-    query: '985',
-    city: 'NewTaipei',
-    category: '先導',
-    aliases: ['985先導公車', '萬大樹林先導公車']
-  },
-  {
-    name: '藍海2線先導公車',
-    city: 'NewTaipei',
-    category: '先導',
-    aliases: ['藍海2線', '藍海2線先導']
-  }
-];
-
+// 有 Worker /route-category 資料可查的分類，key 要跟 worker.js 的
+// ROUTE_CATEGORIES 完全一致。「通勤」底下的內科/南軟專車也是靠這份
+// 端點查，用兩層選單（先選子分類，再顯示清單）。
+// 小、市民小巴、輕軌目前還沒有對應的官方分類對照表，維持原本的
+// 「填入搜尋關鍵字」提示做法，不是真正的分類清單。
 const CATEGORY_OPTIONS = {
-  幹線: { title: '幹線路線', query: '幹線', list: true },
-  通勤: { title: '通勤路線', options: ['內科', '南軟'] },
-  輕軌: { title: '輕軌接駁：請輸入路線名稱或編號', query: '輕軌' },
-  先導: { title: '先導公車', local: LOCAL_ROUTE_INDEX.filter(item => item.category === '先導') },
-  小: { title: '小型公車：請輸入路線名稱或編號', query: '小' },
-  市民小巴: { title: '市民小巴：請輸入路線名稱或編號', query: '市民小巴' },
-  跳蛙: { title: '跳蛙：請輸入路線名稱或起訖點', query: '跳蛙' },
-  其他: {
-    title: '其他特殊路線',
-    options: ['觀光', '花季', '假日', '活動專車', '兒童樂園', '停車場接駁', '懷恩', '其他接駁']
-  }
+  幹線: { title: '幹線專車', mode: 'list', category: '幹線專車' },
+  通勤: {
+    title: '通勤專車',
+    mode: 'submenu',
+    options: [
+      { label: '內科專車', category: '內科專車' },
+      { label: '南軟專車', category: '南軟專車' }
+    ]
+  },
+  輕軌: { title: '輕軌接駁：請輸入路線名稱或編號', mode: 'query', query: '輕軌' },
+  先導: { title: '捷運先導公車', mode: 'list', category: '捷運先導公車' },
+  小: { title: '小型公車：請輸入路線名稱或編號', mode: 'query', query: '小' },
+  市民小巴: { title: '市民小巴：請輸入路線名稱或編號', mode: 'query', query: '市民小巴' },
+  新巴士F: { title: 'F 新巴士', mode: 'list', category: 'F新巴士' },
+  跳蛙: { title: '跳蛙公車', mode: 'list', category: '跳蛙' },
+  其他: { title: '其他特殊路線', mode: 'list', category: '其他' }
 };
 
 function loadSettings() {
@@ -90,13 +71,6 @@ function esc(value) {
 
 function normalize(value) {
   return String(value || '').replace(/[臺台\s]/g, '').toLowerCase();
-}
-
-function localRouteMatch(query) {
-  const q = normalize(query);
-  return LOCAL_ROUTE_INDEX.find(item =>
-    normalize(item.name) === q || item.aliases.some(alias => normalize(alias) === q)
-  );
 }
 
 function tdxName(value) {
@@ -762,14 +736,11 @@ async function searchStationGroups(query) {
 }
 
 async function searchRoutes(query, cities = ['Taipei', 'NewTaipei']) {
-  const local = localRouteMatch(query);
-  const routeQuery = local?.query || local?.name || query;
-  const q = normalize(routeQuery);
+  const q = normalize(query);
 
   const results = await Promise.allSettled(
     cities.map(async city => {
-      if (local && city !== local.city) return [];
-      const routes = await searchCityRoutes(city, routeQuery);
+      const routes = await searchCityRoutes(city, query);
       if (!Array.isArray(routes)) return [];
 
       return routes
@@ -1001,6 +972,10 @@ function renderRouteDetail(item) {
 async function doSearch() {
   const query = $('searchInput').value.trim();
 
+  $('categoryOptions').hidden = true;
+  $('categoryOptions').innerHTML = '';
+  document.querySelectorAll('.route-key').forEach(item => item.classList.remove('selected'));
+
   if (!query) {
     $('searchResults').hidden = true;
     $('searchResults').innerHTML = '';
@@ -1019,63 +994,69 @@ async function doSearch() {
   }
 }
 
-function renderCategoryOptions(category) {
+async function fetchCategoryRoutes(category) {
+  const data = await fetchJson(`/route-category?category=${encodeURIComponent(category)}`);
+  const routes = Array.isArray(data?.routes) ? data.routes : [];
+  return routes.map(route => ({
+    kind: 'route',
+    city: route.city,
+    key: `${route.city}|route|${route.name}`,
+    name: route.name,
+    routeUID: '', routeID: '', subRoutes: []
+  }));
+}
+
+async function showCategoryList(category, label) {
+  $('categoryOptions').hidden = true;
+  $('categoryOptions').innerHTML = '';
+  $('searchResults').hidden = false;
+  $('searchResults').innerHTML = `<div class="empty">正在取得${esc(label)}路線…</div>`;
+
+  try {
+    state.searchResults = await fetchCategoryRoutes(category);
+    renderSearchResults(state.searchResults, label);
+  } catch (err) {
+    $('searchResults').innerHTML = `<div class="empty">分類資料暫時無法取得：${esc(err.message)}</div>`;
+  }
+}
+
+function renderCategoryOptions(categoryKey) {
   const box = $('categoryOptions');
-  const config = CATEGORY_OPTIONS[category];
+  const config = CATEGORY_OPTIONS[categoryKey];
   if (!box || !config) return;
 
-  const localItems = config.local || [];
-  const options = config.options || [];
-  box.hidden = false;
-  box.innerHTML = `
-    <strong class="category-options-title">${esc(config.title)}</strong>
-    ${localItems.length ? `
-      <div class="category-option-grid">
-        ${localItems.map(item => `
-          <button class="category-option" type="button"
-            data-category-query="${esc(item.name)}">${esc(item.name)}</button>
-        `).join('')}
-      </div>` : ''}
-    ${options.length ? `
-      <div class="category-option-grid">
-        ${options.map(option => `
-          <button class="category-option" type="button"
-            data-category-query="${esc(option)}">${esc(option)}</button>
-        `).join('')}
-      </div>` : ''}
-    ${config.query ? `<p class="helper-text">請在上方搜尋欄輸入完整路線，再按「搜尋」。</p>` : ''}
-  `;
+  // 每次切換分類鍵，先把「上一個分類的結果」跟「分類選項框」都清乾淨，
+  // 不然會像「先按幹線、再按先導」那樣，兩批結果同時疊在畫面上。
+  $('searchResults').hidden = true;
+  $('searchResults').innerHTML = '';
+  box.hidden = true;
+  box.innerHTML = '';
 
-  if (config.query && config.list) {
-    box.innerHTML = `<strong class="category-options-title">${esc(config.title)}</strong><div class="empty">正在取得全部${esc(category)}路線…</div>`;
-    $('searchResults').hidden = false;
-    $('searchResults').innerHTML = '';
-    // 分類不是路線名稱搜尋：先取路線主檔，再依名稱／分類關鍵字篩選，
-    // 才能找到「內湖幹線」這類關鍵字不在開頭的路線。
-    Promise.allSettled([
-      getRouteList('Taipei'),
-      getRouteList('NewTaipei')
-    ]).then(results => {
-      const rows = results.flatMap((result, index) =>
-        result.status === 'fulfilled' && Array.isArray(result.value)
-          ? result.value.filter(route => normalize(tdxName(route.RouteName)).includes(normalize(category))).map(route => ({
-            kind: 'route', city: index === 0 ? 'Taipei' : 'NewTaipei',
-            key: `${index === 0 ? 'Taipei' : 'NewTaipei'}|route|${tdxName(route.RouteName)}`,
-            name: tdxName(route.RouteName),
-            routeUID: route.RouteUID || '', routeID: route.RouteID || '',
-            subRoutes: route.SubRoutes || []
-          })) : []
-      ).filter(item => item.name);
-      state.searchResults = [...new Map(rows.map(item => [item.key, item])).values()];
-      renderSearchResults(state.searchResults, category);
-    });
+  if (config.mode === 'list') {
+    showCategoryList(config.category, config.title);
     return;
   }
 
-  if (config.query) {
-    $('searchInput').value = '';
-    $('searchInput').placeholder = config.title;
+  if (config.mode === 'submenu') {
+    box.hidden = false;
+    box.innerHTML = `
+      <strong class="category-options-title">${esc(config.title)}</strong>
+      <div class="category-option-grid">
+        ${config.options.map(option => `
+          <button class="category-option" type="button"
+            data-category-list="${esc(option.category)}"
+            data-category-label="${esc(option.label)}">${esc(option.label)}</button>
+        `).join('')}
+      </div>
+    `;
+    return;
   }
+
+  // mode === 'query'：目前沒有官方分類對照表可查，維持原本
+  // 「把關鍵字放進搜尋欄、請使用者自己按搜尋」的提示做法。
+  $('searchInput').value = '';
+  $('searchInput').placeholder = config.title;
+  $('searchInput').focus();
 }
 
 /* ---------- 事件 ---------- */
@@ -1264,7 +1245,12 @@ document.querySelectorAll('[data-route-prefix], [data-category]').forEach(button
       return;
     }
 
+    // 色塊字頭（藍/紅/綠/棕/橘）跟分類鍵共用同一個結果區，切換時一樣要
+    // 把分類鍵留下的清單清乾淨，不然會疊在一起。
     $('categoryOptions').hidden = true;
+    $('categoryOptions').innerHTML = '';
+    $('searchResults').hidden = true;
+    $('searchResults').innerHTML = '';
     input.value = prefix || '';
     input.placeholder = `輸入${prefix}字頭路線，例如 ${prefix}1、${prefix}7`;
     input.focus();
@@ -1292,17 +1278,12 @@ $('clearRouteFilterBtn')?.addEventListener('click', () => {
 });
 
 document.addEventListener('click', event => {
-  const option = event.target.closest('[data-category-query]');
+  const option = event.target.closest('[data-category-list]');
   if (!option) return;
 
-  const query = option.dataset.categoryQuery;
-  const input = $('searchInput');
-  if (!input) return;
-
-  input.value = query;
-  input.placeholder = `已選分類：${query}；請按「搜尋」`;
-  input.focus();
-  $('categoryOptions').hidden = true;
+  const category = option.dataset.categoryList;
+  const label = option.dataset.categoryLabel || category;
+  showCategoryList(category, label);
 });
 
 /* ---------- 常用名稱編輯 ---------- */

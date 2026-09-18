@@ -199,8 +199,7 @@ h2{
 .route-category-row.row-five{grid-template-columns:repeat(5,minmax(0,1fr))}
 .route-category-row.row-four{grid-template-columns:repeat(4,minmax(0,1fr))}
 .route-category-row.row-one{grid-template-columns:1fr}
-.route-category-row.row-other-actions{grid-template-columns:minmax(0,1fr) 86px}
-.route-key.clear{color:#315f6d;background:#f7fbfc;border-color:#9bbfc7}
+.route-category-row.row-other-actions{grid-template-columns:1fr}
 .category-options{
   margin-top:8px;
   padding:10px;
@@ -435,6 +434,9 @@ h2{
 }
 
 .form-grid{display:grid;gap:7px}
+.search-action-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:stretch}
+.search-action-row .full-button{width:100%}
+.search-action-row .secondary-button{padding:0 16px;white-space:nowrap}
 .form-grid label{
   margin-top:4px;
   color:#496a75;
@@ -614,7 +616,7 @@ footer{
   .route-field>div:first-child{grid-column:1/-1}
   .route-field button{text-align:right}
   .route-category-grid,.route-category-row{gap:5px}
-  .route-category-row.row-other-actions{grid-template-columns:minmax(0,1fr) 76px}
+  .route-category-row.row-other-actions{grid-template-columns:1fr}
   .route-key{font-size:.78rem;min-height:43px}
   .keyboard-heading span{font-size:.66rem}
 }

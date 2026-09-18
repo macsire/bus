@@ -25,7 +25,10 @@
 <form id="searchForm" class="form-grid" style="margin-bottom:12px;" autocomplete="off">
 <label for="searchInput" class="sr-only">搜尋站牌或路線名稱</label>
 <input id="searchInput" type="search" placeholder="輸入站牌名稱或路線，例如 南京復興、306" />
+<div class="search-action-row">
 <button id="searchBtn" class="primary-button full-button" type="submit">搜尋</button>
+<button id="clearRouteFilterBtn" class="secondary-button" type="button">清除</button>
+</div>
 </form>
 <div class="route-keyboard" aria-label="公車路線分類快速輸入">
 <div class="keyboard-heading"><strong>路線分類快速輸入</strong><span>點選後可再補路線號碼</span></div>
@@ -46,12 +49,11 @@
 <div class="route-category-row row-four">
 <button class="route-key" type="button" data-category="小">小</button>
 <button class="route-key" type="button" data-category="市民小巴">市民小巴</button>
-<button class="route-key" type="button" data-route-prefix="F">新巴士 F</button>
+<button class="route-key" type="button" data-category="新巴士F">新巴士 F</button>
 <button class="route-key" type="button" data-category="跳蛙">跳蛙</button>
 </div>
 <div class="route-category-row row-other-actions">
 <button class="route-key other" type="button" data-category="其他">其他（觀光、花季、懷恩⋯）</button>
-<button id="clearRouteFilterBtn" class="route-key clear" type="button">清除</button>
 </div>
 </div>
 <div id="categoryOptions" class="category-options" hidden></div>
