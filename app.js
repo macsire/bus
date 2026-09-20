@@ -912,18 +912,15 @@ function renderRouteDetail(item) {
           <strong>${esc(item.name)}</strong>
           <small>${esc(cityLabel(item.city))}｜選擇行駛方向後查看站牌</small>
         </div>
-        <button class="route-back-button" data-search-back="1">返回</button>
+        <button class="route-back-button" data-search-back="1">回上層</button>
       </div>
-      <div class="direction-tabs" role="tablist" aria-label="選擇行駛方向">
-        ${directions.map((direction, index) => `
-          <button class="direction-tab ${index === selectedIndex ? 'selected' : ''}"
-            type="button" role="tab"
-            aria-selected="${index === selectedIndex}"
-            data-route-direction-index="${index}">
-            ${esc(direction.directionLabel)}
-          </button>
-        `).join('')}
-      </div>
+      ${directions.length > 1 ? `
+      <div class="direction-switcher" aria-label="選擇行駛方向">
+        <button class="direction-arrow" type="button" data-route-direction-step="-1" aria-label="上一個方向">‹</button>
+        <span class="direction-switcher-label">${esc(selected.directionLabel)}</span>
+        <button class="direction-arrow" type="button" data-route-direction-step="1" aria-label="下一個方向">›</button>
+      </div>` : `
+      <p class="direction-switcher-single">${esc(selected.directionLabel)}（單一方向循環路線）</p>`}
       <section class="route-direction-block" aria-labelledby="route-selected-direction">
         <div class="route-direction-heading">
           <div>
@@ -1175,13 +1172,16 @@ document.addEventListener('click', event => {
     return;
   }
 
-  const directionEl = event.target.closest('[data-route-direction-index]');
-  if (directionEl) {
+  const directionStepEl = event.target.closest('[data-route-direction-step]');
+  if (directionStepEl) {
     const routeShell = event.target.closest('.route-result-shell');
     const routeKey = routeShell?.dataset.routeDetailKey;
     const item = state.searchResults.find(row => row.key === routeKey);
     if (item) {
-      item._selectedDirection = Number(directionEl.dataset.routeDirectionIndex) || 0;
+      const total = (item._directions || []).length || 1;
+      const step = Number(directionStepEl.dataset.routeDirectionStep) || 0;
+      const current = Number.isInteger(item._selectedDirection) ? item._selectedDirection : 0;
+      item._selectedDirection = (current + step + total) % total;
       renderRouteDetail(item);
     }
     return;

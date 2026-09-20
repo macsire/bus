@@ -54,14 +54,10 @@ input:focus-visible{
 }
 .brand-header h1{
   margin:0;
-  font-size:1.85rem;
-  line-height:1.18;
-  letter-spacing:-.04em;
-}
-.brand-subtitle{
-  margin:5px 0 0;
-  color:#5d747d;
-  font-size:.9rem;
+  color:#b7c3c6;
+  font-size:.85rem;
+  font-weight:700;
+  letter-spacing:.05em;
 }
 .page-header{padding-bottom:14px}
 .back-link{display:inline-block;margin-bottom:12px;color:var(--color-menu-text);font-weight:800;text-decoration:none}
@@ -96,6 +92,8 @@ h2{
   font-size:1.38rem;
   letter-spacing:-.03em;
 }
+.search-card .eyebrow{font-size:.98rem}
+#homeTitle{font-size:2.07rem}
 
 .main-actions{
   display:grid;
@@ -463,11 +461,14 @@ h2{
 
 .form-grid{display:grid;gap:7px}
 .search-action-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(96px,auto);gap:8px;align-items:stretch}
-.search-action-row .full-button{width:100%;margin-top:0}
+.search-action-row .full-button{width:100%;margin-top:0;box-shadow:none}
 .search-action-row .secondary-button{
   padding:0 14px;
   white-space:nowrap;
-  box-shadow:0 3px 0 #bcd6da;
+  box-shadow:none;
+  border-color:#a9c7e6;
+  background:#dbe7f7;
+  color:#1d4f8f;
 }
 .form-grid label{
   margin-top:4px;
@@ -484,6 +485,11 @@ h2{
   color:var(--color-text);
   background:#fff;
   font-size:1rem;
+}
+#searchInput{
+  min-height:70px;
+  font-size:1.55rem;
+  font-weight:800;
 }
 .form-row-title{
   display:flex;
@@ -584,7 +590,7 @@ h2{
 }
 .route-result-shell{margin-top:8px;border:0;background:transparent}
 .route-primary-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 16px;border-radius:18px;background:var(--color-primary);color:#fff;box-shadow:0 4px 0 #bfd3d7}
-.route-primary-card strong{display:block;font-size:1.55rem;line-height:1.15}
+.route-primary-card strong{display:block;font-size:2.02rem;line-height:1.15}
 .route-primary-card small{display:block;margin-top:6px;color:#d7e7eb;font-size:.8rem}
 .route-primary-label{display:block;margin-bottom:5px;color:#a9dbe0;font-size:.72rem;font-weight:700}
 .route-back-button{border:1px solid #b8dce1;border-radius:11px;background:#f7fcfd;color:var(--color-primary);padding:8px 12px;font-weight:800;white-space:nowrap}
@@ -596,9 +602,41 @@ h2{
 .direction-main strong{display:block;color:#173f58;font-size:1rem}
 .direction-main small{display:block;margin-top:4px;color:#6b7f84;font-size:.78rem;white-space:normal}
 .direction-button{border:0;border-radius:10px;background:#e6f4f5;color:#17657a;padding:9px 10px;font-weight:800;white-space:nowrap}
-.direction-tabs{display:flex;gap:7px;overflow-x:auto;margin-top:14px;padding-bottom:2px}
-.direction-tab{flex:0 0 auto;border:2px solid #b8d2d5;border-radius:11px;background:#fff;color:#315f6d;padding:9px 12px;font-size:.82rem;font-weight:800;white-space:nowrap}
-.direction-tab.selected{border-color:#17657a;background:#e4f5f7;color:#145f6c}
+.direction-switcher{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  margin-top:14px;
+}
+.direction-arrow{
+  display:grid;
+  place-items:center;
+  width:34px;
+  height:34px;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:var(--color-menu-text);
+  font-size:1.4rem;
+  font-weight:800;
+  line-height:1;
+}
+.direction-arrow:active{background:#e4f0f2}
+.direction-switcher-label{
+  min-width:96px;
+  color:var(--color-text);
+  font-size:1.05rem;
+  font-weight:800;
+  text-align:center;
+}
+.direction-switcher-single{
+  margin:14px 0 0;
+  color:#6a8086;
+  font-size:.85rem;
+  font-weight:700;
+  text-align:center;
+}
 .timeline-heading{font-weight:800;color:#173f58;margin:16px 4px 8px}
 .route-directions{display:grid;gap:18px;margin-top:16px}
 .route-direction-block{overflow:hidden;border:2px solid #b8d2d5;border-radius:16px;background:#fff}
